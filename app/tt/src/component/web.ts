@@ -1,11 +1,16 @@
 import express = require('express');
-import { UserData, Users } from './model/users';
+import { UserData, Users } from '../db/users';
 import { randomInt } from 'crypto';
 import { TwingEnvironment, TwingLoaderFilesystem } from 'twing';
-import { Tasks } from './model/tasks';
+import { Tasks } from '../db/tasks';
 import { Pool } from 'pg';
+import { Channel } from 'amqplib';
+import { createEvent, queueTaskBE, queueTaskCUD } from '../events';
 
-export const web = (pool: Pool, client: any) => {
+export const web = async (pool: Pool, ch: Channel) => {
+	await ch.assertQueue(queueTaskBE);
+	await ch.assertQueue(queueTaskCUD);
+
 	const um = new Users(pool);
 	const tm = new Tasks(pool);
 
@@ -32,7 +37,15 @@ export const web = (pool: Pool, client: any) => {
 		// TODO проверка параметров
 		const task = await tm.create(user, req.body.desc, req.body.workerId);
 
-		// TODO Task.Created
+		const event = createEvent('TaskCreated', {
+			id: task.id,
+			description: task.description,
+			worker_id: task.assigned_to,
+		});
+		if (!ch.sendToQueue(queueTaskBE, Buffer.from(JSON.stringify(event)))) {
+			// TODO падать плохая идея
+			throw new Error('sent failed');
+		}
 	});
 
 	app.post('/complete', async (req, res) => {
@@ -42,7 +55,14 @@ export const web = (pool: Pool, client: any) => {
 		const task = await tm.findById(req.body.id);
 		await tm.complete(task, user);
 
-		// TODO Task.Completed
+		const event = createEvent('TaskCompleted', {
+			id: task.id,
+			worker_id: task.completed_by,
+		});
+		if (!ch.sendToQueue(queueTaskBE, Buffer.from(JSON.stringify(event)))) {
+			// TODO падать плохая идея
+			throw new Error('sent failed');
+		}
 	});
 
 	app.post('/reassign', async (req, res) => {
@@ -53,13 +73,20 @@ export const web = (pool: Pool, client: any) => {
 			const users = await um.findWorkers();
 			for (const task of tasks) {
 				const n = randomInt(users.length);
-				tm.reassign(task, users[n]);
-				// TODO Task.Reassign
+				await tm.reassign(task, users[n]);
+
+				const event = createEvent('TaskReassign', {
+					id: task.id,
+					worker_id: task.assigned_to,
+				});
+				if (!ch.sendToQueue(queueTaskBE, Buffer.from(JSON.stringify(event)))) {
+					// TODO падать плохая идея
+					throw new Error('sent failed');
+				}
 			}
 		}
 	});
 
 	app.listen(3001);
-
 	return app;
 };

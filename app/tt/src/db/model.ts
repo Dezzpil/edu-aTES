@@ -1,9 +1,9 @@
 import { Pool, QueryResult } from 'pg';
 
-export abstract class Model {
+export abstract class AbstractModel {
 	protected constructor(protected _pool: Pool) {}
 
-	// TODO можно переписать на await this._pool.connect() - станет читаемо
+	// TODO можно переписать на AWAIT this._pool.connect() - станет читаемо
 	protected async _find<T>(q: string, params?: any[]): Promise<T> {
 		return new Promise((resolve, reject) => {
 			this._pool.connect(async (err, client, release) => {
@@ -27,7 +27,7 @@ export abstract class Model {
 		});
 	}
 
-	// TODO можно переписать на await this._pool.connect() - станет читаемо
+	// TODO можно переписать на AWAIT this._pool.connect() - станет читаемо
 	protected async _modify(q: string, params?: any[]): Promise<QueryResult> {
 		return new Promise((resolve, reject) => {
 			this._pool.connect(async (err, client, release) => {

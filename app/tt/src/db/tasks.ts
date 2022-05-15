@@ -1,6 +1,6 @@
 import { Pool } from 'pg';
 import { UserData, UserRoles } from './users';
-import { Model } from '../model';
+import { AbstractModel } from './model';
 
 export interface TaskData {
 	id: string;
@@ -31,7 +31,7 @@ export interface AssignData {
 	to: string; // user.id
 }
 
-export class Tasks extends Model {
+export class Tasks extends AbstractModel {
 	constructor(pool: Pool) {
 		super(pool);
 	}
@@ -55,36 +55,26 @@ export class Tasks extends Model {
 	}
 
 	async create(user: UserData, desc: string, assignToUserId: string): Promise<TaskData> {
-		const task = {
-			description: desc,
-			status: TaskStatus.New,
-			created_at: new Date(),
-			created_by: user.id,
-			assigned_at: new Date(),
-			assigned_to: assignToUserId,
-		} as TaskData;
+		const data = [desc, TaskStatus.New, new Date(), user.id, new Date(), assignToUserId];
 		const q = `INSERT INTO tasks (description, status, created_at, created_by, assigned_at, assigned_to) VALUES ($1, $2, $3, $4, $5, $6)`;
-		const res = await this._modify(q, Object.values(task));
+		const res = await this._modify(q, data);
 		return res.rows[0];
 	}
 
 	async complete(task: TaskData, user: UserData): Promise<TaskData> {
 		// TODO проверка выполнености
-		task.completed_at = new Date();
-		task.completed_by = user.id;
-		task.status = TaskStatus.Completed;
 		const q = `UPDATE tasks SET completed_at=$1, completed_by=$2, status=$3 WHERE id=$4`;
-		const res = await this._modify(q, [task.completed_at, task.completed_by, task.status, task.id]);
-		return res.rows[0];
+		const res = await this._modify(q, [new Date(), user.id, TaskStatus.Completed, task.id]);
+		task = Object.assign({}, res.rows[0]);
+		return task;
 	}
 
 	async reassign(task: TaskData, assignedToUser: UserData): Promise<TaskData> {
 		// TODO проверка статуса
 		// TODO проверка роли пользователя
-		task.assigned_at = new Date();
-		task.assigned_to = assignedToUser.id;
 		const q = `UPDATE tasks SET assigned_at=$1, assigned_to=$2, status=$3 WHERE id=$4`;
-		const res = await this._modify(q, [task.assigned_at, task.assigned_to, task.status, task.id]);
-		return res.rows[0];
+		const res = await this._modify(q, [new Date(), assignedToUser.id, TaskStatus.Assigned, task.id]);
+		task = Object.assign({}, res.rows[0]);
+		return task;
 	}
 }
