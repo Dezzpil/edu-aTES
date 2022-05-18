@@ -1,6 +1,6 @@
 import { Event } from '../../../event';
-export interface TaskCompleted1 extends Event {
-	event_name: 'TaskCompleted';
+export interface TaskReassign1 extends Event {
+	event_name: 'TaskReassign';
 	event_version: 1;
 	data: {
 		public_id: string;

@@ -4,13 +4,22 @@
   "description": "",
   "main": "main.js",
   "scripts": {
-    "test": "echo \"Error: no test specified\" && exit 1"
+    "test": "jest",
+    "build": "ts-node build.ts"
   },
   "keywords": [],
   "author": "",
   "license": "ISC",
   "dependencies": {
-    "nanoid": "^3.3.4",
+    "ajv": "^8.11.0",
+    "nanoid": "^3.3.4"
+  },
+  "devDependencies": {
+    "@types/chai": "^4.3.1",
+    "@types/jest": "^27.5.1",
+    "chai": "^4.3.6",
+    "jest": "^28.1.0",
+    "ts-jest": "^28.0.2",
     "typescript-json-schema": "^0.53.0"
   }
 }
