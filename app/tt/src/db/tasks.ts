@@ -42,7 +42,7 @@ export class Tasks extends AbstractModel {
 			q.push(`WHERE assigned_to = $1`);
 		}
 		q.push('ORDER BY created_at DESC');
-		return this._find<TaskData[]>(q.join(' '), [user.id]);
+		return this._find<TaskData[]>(q.join(' '), [user.public_id]);
 	}
 
 	async findById(id: string): Promise<TaskData> {
@@ -55,7 +55,7 @@ export class Tasks extends AbstractModel {
 	}
 
 	async create(user: UserData, desc: string, assignToUserId: string): Promise<TaskData> {
-		const data = [desc, TaskStatus.New, new Date(), user.id, new Date(), assignToUserId];
+		const data = [desc, TaskStatus.New, new Date(), user.public_id, new Date(), assignToUserId];
 		const q = `INSERT INTO tasks (description, status, created_at, created_by, assigned_at, assigned_to) VALUES ($1, $2, $3, $4, $5, $6)`;
 		const res = await this._modify(q, data);
 		return res.rows[0];
@@ -64,7 +64,7 @@ export class Tasks extends AbstractModel {
 	async complete(task: TaskData, user: UserData): Promise<TaskData> {
 		// TODO проверка выполнености
 		const q = `UPDATE tasks SET completed_at=$1, completed_by=$2, status=$3 WHERE id=$4`;
-		const res = await this._modify(q, [new Date(), user.id, TaskStatus.Completed, task.id]);
+		const res = await this._modify(q, [new Date(), user.public_id, TaskStatus.Completed, task.id]);
 		task = Object.assign({}, res.rows[0]);
 		return task;
 	}
@@ -73,7 +73,12 @@ export class Tasks extends AbstractModel {
 		// TODO проверка статуса
 		// TODO проверка роли пользователя
 		const q = `UPDATE tasks SET assigned_at=$1, assigned_to=$2, status=$3 WHERE id=$4`;
-		const res = await this._modify(q, [new Date(), assignedToUser.id, TaskStatus.Assigned, task.id]);
+		const res = await this._modify(q, [
+			new Date(),
+			assignedToUser.public_id,
+			TaskStatus.Assigned,
+			task.id,
+		]);
 		task = Object.assign({}, res.rows[0]);
 		return task;
 	}

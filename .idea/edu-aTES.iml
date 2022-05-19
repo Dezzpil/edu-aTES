@@ -7,6 +7,9 @@
       <excludeFolder url="file://$MODULE_DIR$/app/tt/dist" />
       <excludeFolder url="file://$MODULE_DIR$/rabbitmq/dist" />
       <excludeFolder url="file://$MODULE_DIR$/app/tt/data" />
+      <excludeFolder url="file://$MODULE_DIR$/app/esr/coverage" />
+      <excludeFolder url="file://$MODULE_DIR$/app/esr/schemas" />
+      <excludeFolder url="file://$MODULE_DIR$/dist" />
     </content>
     <orderEntry type="inheritedJdk" />
     <orderEntry type="sourceFolder" forTests="false" />

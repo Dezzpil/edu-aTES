@@ -4,7 +4,7 @@ import { execSync } from 'child_process';
 const fs = require('fs').promises;
 const path = require('path');
 
-export const SCHEMAS_DIR = 'schemas';
+export const SCHEMAS_DIR = __dirname + '/schemas';
 
 export async function walk(dir: string) {
 	let files = await fs.readdir(dir);

@@ -1,9 +1,8 @@
 import { Pool } from 'pg';
 import { AbstractModel } from './model';
-import { AccountsEventsModifyData } from '../events';
 
 export interface UserData {
-	id: string;
+	public_id: string;
 	email: string;
 	role: string;
 }
@@ -20,7 +19,7 @@ export class Users extends AbstractModel {
 	}
 
 	async findById(publicId: string): Promise<UserData> {
-		const users = await this._find<UserData[]>(`SELECT * FROM users WHERE id = $1`, [publicId]);
+		const users = await this._find<UserData[]>(`SELECT * FROM users WHERE public_id = $1`, [publicId]);
 		return users[0];
 	}
 
@@ -33,24 +32,40 @@ export class Users extends AbstractModel {
 		return this._find<UserData[]>(`SELECT * FROM users WHERE role = ${UserRoles.Worker}`);
 	}
 
-	async create(data: AccountsEventsModifyData): Promise<UserData> {
+	async create(
+		public_id: string,
+		email: string,
+		position: string | null,
+		name: string | null
+	): Promise<UserData> {
 		const user = {
-			id: data.id,
-			role: data.position || UserRoles.Admin,
-			email: data.email,
+			public_id,
+			email,
+			role: position || UserRoles.Admin,
 		} as UserData;
-		const result = await this._modify(`INSERT INTO users (id, role, email) VALUES ($1, $2, $3)`, [
-			user.id,
+		const result = await this._modify(`INSERT INTO users (public_id, role, email) VALUES ($1, $2, $3)`, [
+			user.public_id,
 			user.role,
 			user.email,
 		]);
 		return result.rows[0];
 	}
 
+	async update(
+		public_id: string,
+		email: string,
+		position: string | null,
+		name: string | null
+	): Promise<UserData> {
+		// TODO implement
+		const r = await this._find<UserData[]>(`SELECT * FROM users WHERE public_id = $1`, [public_id]);
+		return r[0];
+	}
+
 	async changeRole(user: UserData, role: string) {
 		user.role = role;
-		const q = `UPDATE users SET role=$1 WHERE id=$2`;
-		const res = await this._modify(q, [role, user.id]);
+		const q = `UPDATE users SET role=$1 WHERE public_id=$2`;
+		const res = await this._modify(q, [role, user.public_id]);
 		return res.rows[0];
 	}
 }
