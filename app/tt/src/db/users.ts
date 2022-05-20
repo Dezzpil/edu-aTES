@@ -24,12 +24,14 @@ export class Users extends AbstractModel {
 	}
 
 	async findAnyAdmin(): Promise<UserData> {
-		const users = await this._find<UserData[]>(`SELECT * FROM users WHERE role = ${UserRoles.Admin}`);
+		const q = `SELECT * FROM users WHERE role = '${UserRoles.Admin}'`;
+		const users = await this._find<UserData[]>(q);
 		return users[0];
 	}
 
 	async findWorkers(): Promise<UserData[]> {
-		return this._find<UserData[]>(`SELECT * FROM users WHERE role = ${UserRoles.Worker}`);
+		const q = `SELECT * FROM users WHERE role = '${UserRoles.Worker}'`;
+		return this._find<UserData[]>(q, [], false);
 	}
 
 	async create(

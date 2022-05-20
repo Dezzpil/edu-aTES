@@ -11,90 +11,85 @@ import { DataTaskCreated1 } from '../../../esr/events/task/created/1';
 import { DataTaskCompleted1 } from '../../../esr/events/task/completed/1';
 import { DataTaskReassign1 } from '../../../esr/events/task/reassign/1';
 import ClientOAuth2 from 'client-oauth2';
-import { request } from 'http';
+import session from 'express-session';
+import bodyParser from 'body-parser';
+
+const cors = require('cors');
+const axios = require('axios').default;
 
 export const web = async (pool: Pool, ch: Channel, oauth: ClientOAuth2) => {
-	let accessToken: string;
-
 	await ch.assertQueue(queueTaskBE);
 	await ch.assertQueue(queueTaskCUD);
 
 	const um = new Users(pool);
 	const tm = new Tasks(pool);
 
+	const getAuthedUser = async (req: express.Request): Promise<UserData> => {
+		const s = req.session as any;
+		if ('public_id' in s) {
+			return await um.findById(s.public_id);
+		}
+		if ('token' in s) {
+			const url = 'http://127.0.0.1:3000/accounts/current.json';
+			const result = await axios.get(url, {
+				headers: {
+					Authorization: `Bearer ${s.token}`,
+				},
+				withCredentials: true,
+			});
+			if (result.data === null) throw new Error('no data for current user by token');
+			s.public_id = result.data.public_id;
+			return await um.findById(s.public_id);
+		}
+
+		throw new Error(`no token`);
+	};
+
 	const loader = new TwingLoaderFilesystem(__dirname + '/../view');
 	const twing = new TwingEnvironment(loader);
 	const app = express();
+	app.use(bodyParser.urlencoded({ extended: true }));
+	app.use(bodyParser.json());
+	app.use(cors({ credentials: true, origin: '*' }));
+	app.use(
+		session({
+			resave: true,
+			saveUninitialized: true,
+			cookie: { secure: false, sameSite: false },
+			secret: 'hophey',
+			rolling: true,
+		})
+	);
 
-	async function getAuthedUser(req: express.Request): Promise<UserData> {
-		console.log(accessToken); //=> { accessToken: '...', tokenType: 'bearer', ... }
-
-		const options = {
-			hostname: '127.0.0.1',
-			port: 3000,
-			path: '/oauth/authorize',
-			method: 'GET',
-			headers: {
-				Authorize: `Bearer ${accessToken}`,
-				Accept: 'application/json',
-			},
-		};
-		return new Promise((resolve, reject) => {
-			const req = request(options, async res => {
-				let output = '';
-				res.on('data', chunk => {
-					output = output + chunk.toString();
-				});
-				res.on('end', async () => {
-					console.log(output);
-					resolve(await um.findAnyAdmin());
-				});
-			});
-			req.on('error', error => {
-				console.error(error);
-				reject(error);
-			});
-			req.end();
-		});
-	}
-
-	app.get('/', async (req: express.Request, res: express.Response) => {
-		console.log(req.cookies);
-
-		// const user = await getAuthedUser(req);
-		// const workers = await um.findWorkers();
-		// const tasks = await tm.findForUser(user);
-		// const out = await twing.render('index.twig', { user, tasks, workers });
-		// res.end(out);
-		res.end('/');
-	});
-
-	app.get('/auth', (req: express.Request, res: express.Response) => {
-		res.redirect(oauth.code.getUri());
-	});
+	let token: string;
 
 	app.get('/auth/redirect', async (req: express.Request, res: express.Response) => {
-		const token = await oauth.code.getToken(req.originalUrl);
-		console.log(token); //=> { accessToken: '...', tokenType: 'bearer', ... }
+		console.log('/auth/redirect');
+		const result = await oauth.code.getToken(req.originalUrl);
+		token = result.accessToken;
 
-		// Refresh the current users access token.
+		// @ts-ignore
+		req.session.token = token;
+
+		console.log(`Token saved: ${result.accessToken}`);
+		res.redirect('/');
+	});
+
+	app.get('/', async (req: express.Request, res: express.Response) => {
+		let user: UserData;
 		try {
-			const updatedToken = await token.refresh();
-			console.log(updatedToken !== token); //=> true
-			console.log(updatedToken.accessToken);
-		} catch (e: any) {
-			console.error(e);
+			user = await getAuthedUser(req);
+		} catch (e) {
+			const authorizeUrl = oauth.code.getUri();
+			res.end(`<a href="${authorizeUrl}">Login</a>`);
+			return;
 		}
 
-		// Sign API requests on behalf of the current user.
-		token.sign({
-			method: 'get',
-			url: 'http://127.0.0.1:3001',
-		});
-
-		// TODO We should store the token into a database.
-		accessToken = token.accessToken;
-		res.send(token.accessToken);
+		const workers = await um.findWorkers();
+		const tasks = await tm.findForUser(user);
+		const out = await twing.render('index.twig', { user, tasks, workers });
+		res.end(out);
+		res.end('/');
 	});
 
 	app.post('/task', async (req, res) => {

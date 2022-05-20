@@ -38,11 +38,13 @@ export class Tasks extends AbstractModel {
 
 	async findForUser(user: UserData): Promise<TaskData[]> {
 		const q = ['SELECT * FROM tasks'];
+		const params = [];
 		if (user.role === UserRoles.Worker) {
 			q.push(`WHERE assigned_to = $1`);
+			params.push(user.public_id);
 		}
 		q.push('ORDER BY created_at DESC');
-		return this._find<TaskData[]>(q.join(' '), [user.public_id]);
+		return await this._find<TaskData[]>(q.join(' '), params, false);
 	}
 
 	async findById(id: string): Promise<TaskData> {

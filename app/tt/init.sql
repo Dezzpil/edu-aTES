@@ -8,7 +8,7 @@ CREATE TABLE users (
     PRIMARY KEY (id)
 );
 
-INSERT INTO users (public_id, email, role) VALUES (gen_random_uuid()::text, 'n.dezz.orlov@yandex.com', 'admin');
+INSERT INTO users (public_id, email, role) VALUES ('59bd60f5-ac22-4161-a2a0-a5bf1e64973d', 'n.dezz.orlov@yandex.com', 'admin');
 INSERT INTO users (public_id, email, role) VALUES (gen_random_uuid()::text, 'foo@gmail.com', 'worker');
 INSERT INTO users (public_id, email, role) VALUES (gen_random_uuid()::text, 'bar@gmail.com', 'worker');
 

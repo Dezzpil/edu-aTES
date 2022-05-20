@@ -2,7 +2,20 @@ import { Pool } from 'pg';
 import client from 'amqplib';
 import { web } from './component/web';
 import { users } from './component/users';
-import ClientOAuth2 from 'client-oauth2';
+import { writeFileSync } from 'fs';
+import { inspect } from 'util';
+
+process.on('unhandledRejection', (reason, promise) => {
+	console.error('unhandledRejection');
+	writeFileSync(__dirname + '/reason.txt', inspect(reason));
+	writeFileSync(__dirname + '/promise.txt', inspect(promise));
+	// @ts-ignore
+	if (('response' in reason) as any) {
+		// @ts-ignore
+		writeFileSync(__dirname + '/reason.html', reason.response.data);
+	}
+	process.exit(1);
+});
 
 (async () => {
 	const pool = new Pool({
@@ -20,7 +33,7 @@ import ClientOAuth2 from 'client-oauth2';
 		clientSecret: 'RRfLg1-VT_wKaJKpedcZFMewJSH4VZURLVZ3__fVi9E',
 		accessTokenUri: 'http://127.0.0.1:3000/oauth/token',
 		authorizationUri: 'http://127.0.0.1:3000/oauth/authorize',
-		redirectUri: 'http://localhost:3001/auth/redirect',
+		redirectUri: 'http://127.0.0.1:3001/auth/redirect',
 		scopes: ['public'],
 	});
 
