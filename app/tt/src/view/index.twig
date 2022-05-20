@@ -1,46 +1,43 @@
-<!DOCTYPE html>
-<html lang="en">
-<head>
+{% extends "template.twig" %}
 
-  <!-- Basic Page Needs
-  –––––––––––––––––––––––––––––––––––––––––––––––––– -->
-  <meta charset="utf-8">
-  <title>Your page title here :)</title>
-  <meta name="description" content="">
-  <meta name="author" content="">
+{% block content %}
+    {% if isAdmin %}
+        <form method="post" action="/create">
+            <div class="row">
+                <div class="nine columns">
+                    <label for="desc">Описание</label>
+                    <input type="text" name="desc" id="desc" value="" placeholder="Описание задачи" style="width: 100%">
+                </div>
+                <div class="three columns">
+                    <label for="workerId">Исполнитель</label>
+                    <select name="workerId" id="workerId">
+                        {% for worker in workers %}
+                            <option value="{{ worker.public_id }}">{{ worker.email }}</option>
+                        {% endfor %}
+                    </select>
+                </div>
+            </div>
+            <input class="button-primary" type="submit" value="Зарегистрировать">
+        </form>
+    {% endif %}
 
-  <!-- Mobile Specific Metas
-  –––––––––––––––––––––––––––––––––––––––––––––––––– -->
-  <meta name="viewport" content="width=device-width, initial-scale=1">
-
-  <!-- FONT
-  –––––––––––––––––––––––––––––––––––––––––––––––––– -->
-  <link href="//fonts.googleapis.com/css?family=Raleway:400,300,600" rel="stylesheet" type="text/css">
-
-  <!-- CSS
-  –––––––––––––––––––––––––––––––––––––––––––––––––– -->
-  <link rel="stylesheet" href="css/normalize.css">
-  <link rel="stylesheet" href="css/skeleton.css">
-
-  <!-- Favicon
-  –––––––––––––––––––––––––––––––––––––––––––––––––– -->
-  <link rel="icon" type="image/png" href="images/favicon.png">
-
-</head>
-<body>
-
-  <!-- Primary Page Layout
-  –––––––––––––––––––––––––––––––––––––––––––––––––– -->
-  <div class="container">
-    <div class="row">
-      <div class="one-half column" style="margin-top: 25%">
-        <h4>Basic Page</h4>
-        <p>This index.html page is a placeholder with the CSS, font and favicon. It's just waiting for you to add some content! If you need some help hit up the <a href="http://www.getskeleton.com">Skeleton documentation</a>.</p>
-      </div>
-    </div>
-  </div>
-
-<!-- End Document
-  –––––––––––––––––––––––––––––––––––––––––––––––––– -->
-</body>
-</html>
+    {% if tasks|length %}
+        <h2>Задачи</h2>
+        <div class="row">
+            {% for task in tasks %}
+                <form method="post" action="/complete" class="four columns">
+                    <div class="twelve columns">
+                        <span>{{ task.description }}</span>
+                        <small style="color: darkgray">{{ task.assigned_at }}</small>
+                    </div>
+                    {% if user.public_id == task.assigned_to %}
+                        <input type="hidden" name="id" value="{{ task.id }}">
+                        <input type="submit" value="Выполнить">
+                    {% else %}
+                        <small>{{ task.email }}</small>
+                    {% endif %}
+                </form>
+            {% endfor %}
+        </div>
+    {% endif %}
+{% endblock %}

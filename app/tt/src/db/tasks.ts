@@ -8,12 +8,11 @@ export interface TaskData {
 	description: string;
 	status: TaskStatus;
 	created_at: Date;
-	created_by: string; // user.id
+	created_by: string; // user.public_id
 	assigned_at: Date;
-	assigned_to: string; // user.id
+	assigned_to: string; // user.public_id
 	completed_at: Date;
-	completed_by: string; // user.id
-	// assigns: AssignData
+	completed_by: string; // user.public_id
 }
 
 export enum TaskStatus {
@@ -22,29 +21,11 @@ export enum TaskStatus {
 	Completed = 2,
 }
 
-export interface AssignData {
-	id: string;
-	task_id: string;
-	created_at: Date;
-	created_by: string; // user.id
-	was: string; // user.id
-	to: string; // user.id
-}
+export type TaskDateWAssignedEmail = TaskData & { email: string };
 
 export class Tasks extends AbstractModel {
 	constructor(pool: Pool) {
 		super(pool);
-	}
-
-	async findForUser(user: UserData): Promise<TaskData[]> {
-		const q = ['SELECT * FROM tasks'];
-		const params = [];
-		if (user.role === UserRoles.Worker) {
-			q.push(`WHERE assigned_to = $1`);
-			params.push(user.public_id);
-		}
-		q.push('ORDER BY created_at DESC');
-		return await this._find<TaskData[]>(q.join(' '), params, false);
 	}
 
 	async findById(id: string): Promise<TaskData> {
@@ -52,20 +33,39 @@ export class Tasks extends AbstractModel {
 		return tasks[0];
 	}
 
-	async findAllNotCompleted(): Promise<TaskData[]> {
-		return this._find<TaskData[]>(`SELECT * FROM tasks WHERE status != $1`, [TaskStatus.Completed]);
+	async findNonCompletedForUser(user: UserData): Promise<TaskDateWAssignedEmail[]> {
+		const q = ['SELECT t.*, u.email FROM tasks t LEFT JOIN users u ON u.public_id=t.assigned_to'];
+		const params = [];
+
+		q.push(`WHERE t.status != $1`);
+		params.push(TaskStatus.Completed);
+		if (user.role === UserRoles.Worker) {
+			q.push(`AND t.assigned_to = $2`);
+			params.push(user.public_id);
+		}
+		q.push('ORDER BY t.created_at DESC');
+		return await this._find<TaskDateWAssignedEmail[]>(q.join(' '), params, false);
+	}
+
+	async findAllNotCompleted(): Promise<TaskDateWAssignedEmail[]> {
+		return this._find<TaskDateWAssignedEmail[]>(
+			`SELECT t.*, u.email FROM tasks t LEFT JOIN users u ON u.public_id=t.assigned_to WHERE t.status != $1`,
+			[TaskStatus.Completed],
+			false
+		);
 	}
 
 	async create(user: UserData, desc: string, assignToUserId: string): Promise<TaskData> {
 		const data = [desc, TaskStatus.New, new Date(), user.public_id, new Date(), assignToUserId];
-		const q = `INSERT INTO tasks (description, status, created_at, created_by, assigned_at, assigned_to) VALUES ($1, $2, $3, $4, $5, $6)`;
+		const q = `INSERT INTO tasks (description, status, created_at, created_by, assigned_at, assigned_to) VALUES ($1, $2, $3, $4, $5, $6) RETURNING *`;
 		const res = await this._modify(q, data);
+		console.log(res);
 		return res.rows[0];
 	}
 
 	async complete(task: TaskData, user: UserData): Promise<TaskData> {
 		// TODO проверка выполнености
-		const q = `UPDATE tasks SET completed_at=$1, completed_by=$2, status=$3 WHERE id=$4`;
+		const q = `UPDATE tasks SET completed_at=$1, completed_by=$2, status=$3 WHERE id=$4 RETURNING *`;
 		const res = await this._modify(q, [new Date(), user.public_id, TaskStatus.Completed, task.id]);
 		task = Object.assign({}, res.rows[0]);
 		return task;
@@ -74,7 +74,7 @@ export class Tasks extends AbstractModel {
 	async reassign(task: TaskData, assignedToUser: UserData): Promise<TaskData> {
 		// TODO проверка статуса
 		// TODO проверка роли пользователя
-		const q = `UPDATE tasks SET assigned_at=$1, assigned_to=$2, status=$3 WHERE id=$4`;
+		const q = `UPDATE tasks SET assigned_at=$1, assigned_to=$2, status=$3 WHERE id=$4 RETURNING *`;
 		const res = await this._modify(q, [
 			new Date(),
 			assignedToUser.public_id,

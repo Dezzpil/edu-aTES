@@ -14,7 +14,7 @@ INSERT INTO users (public_id, email, role) VALUES (gen_random_uuid()::text, 'bar
 
 CREATE TABLE tasks (
     id serial,
-    public_id uuid,
+    public_id uuid default gen_random_uuid(),
     description text,
     status smallint,
     created_at timestamp,

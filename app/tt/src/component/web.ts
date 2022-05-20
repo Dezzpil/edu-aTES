@@ -1,5 +1,5 @@
 import express = require('express');
-import { UserData, Users } from '../db/users';
+import { UserData, UserRoles, Users } from '../db/users';
 import { randomInt } from 'crypto';
 import { TwingEnvironment, TwingLoaderFilesystem } from 'twing';
 import { Tasks } from '../db/tasks';
@@ -13,6 +13,7 @@ import { DataTaskReassign1 } from '../../../esr/events/task/reassign/1';
 import ClientOAuth2 from 'client-oauth2';
 import session from 'express-session';
 import bodyParser from 'body-parser';
+import { resolve } from 'path';
 
 const cors = require('cors');
 const axios = require('axios').default;
@@ -27,9 +28,11 @@ export const web = async (pool: Pool, ch: Channel, oauth: ClientOAuth2) => {
 	const getAuthedUser = async (req: express.Request): Promise<UserData> => {
 		const s = req.session as any;
 		if ('public_id' in s) {
+			console.log('get public_id in session');
 			return await um.findById(s.public_id);
 		}
 		if ('token' in s) {
+			console.log('get token in session');
 			const url = 'http://127.0.0.1:3000/accounts/current.json';
 			const result = await axios.get(url, {
 				headers: {
@@ -48,6 +51,11 @@ export const web = async (pool: Pool, ch: Channel, oauth: ClientOAuth2) => {
 	const loader = new TwingLoaderFilesystem(__dirname + '/../view');
 	const twing = new TwingEnvironment(loader);
 	const app = express();
+
+	const staticPath = resolve(__dirname + '../../../public');
+	console.log(staticPath);
+
+	app.use(express.static(staticPath));
 	app.use(bodyParser.urlencoded({ extended: true }));
 	app.use(bodyParser.json());
 	app.use(cors({ credentials: true, origin: '*' }));
@@ -81,18 +89,25 @@ export const web = async (pool: Pool, ch: Channel, oauth: ClientOAuth2) => {
 			user = await getAuthedUser(req);
 		} catch (e) {
 			const authorizeUrl = oauth.code.getUri();
-			res.end(`<a href="${authorizeUrl}">Login</a>`);
+			const out = await twing.render('login.twig', { authorizeUrl });
+			res.end(out);
 			return;
 		}
 
-		const workers = await um.findWorkers();
-		const tasks = await tm.findForUser(user);
-		const out = await twing.render('index.twig', { user, tasks, workers });
+		const isAdmin = user.role === UserRoles.Admin;
+		const workers = await (isAdmin ? um.findWorkers() : []);
+		const tasks = await (isAdmin ? tm.findAllNotCompleted() : tm.findNonCompletedForUser(user));
+		const out = await twing.render('index.twig', {
+			isAdmin,
+			workers,
+			tasks,
+			user,
+		});
 		res.end(out);
 		res.end('/');
 	});
 
-	app.post('/task', async (req, res) => {
+	app.post('/create', async (req, res) => {
 		const user = await getAuthedUser(req);
 
 		// TODO проверка параметров
@@ -108,14 +123,15 @@ export const web = async (pool: Pool, ch: Channel, oauth: ClientOAuth2) => {
 			// TODO обработка ошибок
 			throw new Error('sent failed');
 		}
+		res.redirect('/');
 	});
 
 	app.post('/complete', async (req, res) => {
 		const user = await getAuthedUser(req);
 
 		// TODO проверка принадлжености таски
-		const task = await tm.findById(req.body.id);
-		await tm.complete(task, user);
+		let task = await tm.findById(req.body.id);
+		task = await tm.complete(task, user);
 
 		const json = toJSON('TaskCompleted', 1, {
 			public_id: task.public_id,
@@ -125,6 +141,7 @@ export const web = async (pool: Pool, ch: Channel, oauth: ClientOAuth2) => {
 			// TODO падать плохая идея
 			throw new Error('sent failed');
 		}
+		res.redirect('/');
 	});
 
 	app.post('/reassign', async (req, res) => {
@@ -135,11 +152,11 @@ export const web = async (pool: Pool, ch: Channel, oauth: ClientOAuth2) => {
 			const users = await um.findWorkers();
 			for (const task of tasks) {
 				const n = randomInt(users.length);
-				await tm.reassign(task, users[n]);
+				const reassigned = await tm.reassign(task, users[n]);
 
 				const json = toJSON('TaskReassign', 1, {
-					public_id: task.public_id,
-					account_public_id: task.assigned_to,
+					public_id: reassigned.public_id,
+					account_public_id: reassigned.assigned_to,
 				} as DataTaskReassign1);
 
 				if (!ch.sendToQueue(queueTaskBE, Buffer.from(json))) {
@@ -148,6 +165,7 @@ export const web = async (pool: Pool, ch: Channel, oauth: ClientOAuth2) => {
 				}
 			}
 		}
+		res.redirect('/');
 	});
 
 	app.listen(3001);
