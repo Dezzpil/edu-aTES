@@ -6,7 +6,9 @@ export interface AccountCreated1 extends Event {
 	data: {
 		public_id: string;
 		email: string;
-		full_name: string;
+		/** @nullable */
+		full_name: string | null;
+		/** @nullable */
 		position: string | null;
 	};
 }

@@ -7,6 +7,7 @@ export interface AccountUpdated1 extends Event {
 		public_id: string;
 		email: string;
 		full_name: string;
+		/** @nullable */
 		position: string | null;
 	};
 }

@@ -10,11 +10,15 @@ import { AccountRoleChanged1 } from '../../../esr/events/account/role-changed/1'
 
 function validateEventFromMessage(msg: ConsumeMessage | null): Event | null {
 	if (msg) {
-		let event: Event;
+		console.log('consumed message');
 		try {
-			return fromJSON<Event>(msg.content.toString());
+			console.log(msg.content.toString());
+			const event = fromJSON<Event>(msg.content.toString());
+			console.log(event);
+			return event;
 		} catch (e: any) {
 			// TODO работа с ошибками;
+			console.log(e);
 		}
 	}
 	return null;
