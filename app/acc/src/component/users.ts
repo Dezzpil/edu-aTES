@@ -1,12 +1,12 @@
 import { Pool } from 'pg';
 import client, { Channel, ConsumeMessage } from 'amqplib';
-import { Users } from '../db/users';
-import { Event, fromJSON } from '../../../esr/event';
+import { fromJSON } from '../../../esr/event';
+import { QueueUsersBE, QueueUsersCUD } from '../../../esr/queues';
 import { AccountCreated1 } from '../../../esr/events/account/created/1';
 import { AccountCreated2 } from '../../../esr/events/account/created/2';
-import { AccountUpdated1 } from '../../../esr/events/account/updated/1';
 import { AccountRoleChanged1 } from '../../../esr/events/account/role-changed/1';
-import { QueueUsersBE, QueueUsersCUD } from '../../../esr/queues';
+import { Event } from '../../../esr/event';
+import { AccountUpdated1 } from '../../../esr/events/account/updated/1';
 
 function validateEventFromMessage(msg: ConsumeMessage | null): Event | null {
 	if (msg) {
@@ -17,7 +17,7 @@ function validateEventFromMessage(msg: ConsumeMessage | null): Event | null {
 			return event;
 		} catch (e: any) {
 			// TODO работа с ошибками;
-			console.log(e);
+			console.error(e);
 		}
 	}
 	return null;

@@ -23,7 +23,7 @@ import client from 'amqplib';
 
 	const conn = await client.connect('amqp://127.0.0.1:5672');
 	const ch = await conn.createChannel();
-
-	await users(pool, ch);
-	await web(pool, ch, oauth);
+	//
+	// await users(pool, ch);
+	// await web(pool, ch, oauth);
 })();
