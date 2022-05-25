@@ -7,6 +7,7 @@ import { AccountRoleChanged1 } from '../../../esr/events/account/role-changed/1'
 import { AccountUpdated1 } from '../../../esr/events/account/updated/1';
 import { Users } from '../db/users';
 import { validateEventFromMessage } from '../helpers';
+import { inspect } from 'util';
 
 export const users = async (pool: Pool, ch: Channel) => {
 	await ch.assertQueue(QueueUsersCUD, { durable: true });
@@ -31,7 +32,7 @@ export const users = async (pool: Pool, ch: Channel) => {
 									data.position
 									// data.full_name
 								);
-								console.log(`user created ${user}`);
+								console.log(`user created ${inspect(user)}`);
 								break;
 							}
 							case 2: {
@@ -43,7 +44,7 @@ export const users = async (pool: Pool, ch: Channel) => {
 									data.position
 									// fullName
 								);
-								console.log(`user created ${user}`);
+								console.log(`user created ${inspect(user)}`);
 								break;
 							}
 							default: {
@@ -58,7 +59,7 @@ export const users = async (pool: Pool, ch: Channel) => {
 							case 1: {
 								const data = (event as AccountUpdated1).data;
 								const user = await um.upsert(data.public_id, data.email, data.position);
-								console.log(`user updated ${user}`);
+								console.log(`user updated ${inspect(user)}`);
 								break;
 							}
 							default: {
@@ -89,7 +90,7 @@ export const users = async (pool: Pool, ch: Channel) => {
 								const data = (event as AccountRoleChanged1).data;
 								const user = await um.findByPublicId(data.public_id);
 								const userUpdated = await um.changeRole(user, data.role);
-								console.log(`user role changed ${user}`);
+								console.log(`user role changed ${inspect(user)}`);
 							}
 						}
 					}

@@ -9,6 +9,7 @@ import { DataTaskReassign1 } from '../../../esr/events/task/reassign/1';
 import { Users } from '../db/users';
 import { Transactions } from '../db/transactions';
 import { DataTaskCompleted1 } from '../../../esr/events/task/completed/1';
+import { inspect } from 'util';
 
 export const tasks = async (pool: Pool, ch: Channel) => {
 	await ch.assertQueue(QueueTaskCUD, { durable: true });
@@ -28,7 +29,7 @@ export const tasks = async (pool: Pool, ch: Channel) => {
 							const price = calculatePrice();
 							const data = event.data as DataTaskCreated1;
 							const task = await tm.create(data.public_id, data.description, price);
-							console.log(`task created ${task}`);
+							console.log(`task created ${inspect(task)}`);
 							break;
 						default:
 							throw new Error('not implemented!');
@@ -50,7 +51,7 @@ export const tasks = async (pool: Pool, ch: Channel) => {
 							const worker = await getUser(data.account_public_id, um);
 							const cost = getRandomInt(10, 20);
 							const transaction = await trm.withdraw(worker, task, cost);
-							console.log(`task reassigned ${transaction}`);
+							console.log(`task reassigned ${inspect(transaction)}`);
 							break;
 						default: {
 							throw new Error(`not implemented`);
@@ -65,7 +66,7 @@ export const tasks = async (pool: Pool, ch: Channel) => {
 							const task = await getTask(data.public_id, tm);
 							const worker = await getUser(data.account_public_id, um);
 							const transaction = await trm.enroll(worker, task);
-							console.log(`task completed ${transaction}`);
+							console.log(`task completed ${inspect(transaction)}`);
 							break;
 						default: {
 							throw new Error(`not implemented`);

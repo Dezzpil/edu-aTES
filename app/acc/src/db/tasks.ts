@@ -1,10 +1,8 @@
 import { Pool } from 'pg';
-import { UserData } from './users';
 import { AbstractModel } from './model';
-import { DataTaskCreated1, TaskCreated1 } from '../../../esr/events/task/created/1';
 
 export interface TaskData {
-	id: string;
+	id?: string;
 	public_id: string;
 	description: string;
 	price: number;
@@ -20,18 +18,9 @@ export class Tasks extends AbstractModel {
 		return tasks[0];
 	}
 
-	async create(public_id: string, desc: string, price: number): Promise<TaskData> {
-		// TODO implement
-		return {} as TaskData;
-	}
-
-	async reassign(task: TaskData, toUser: UserData): Promise<TaskData> {
-		// TODO implement
-		return {} as TaskData;
-	}
-
-	async complete(task: TaskData, byUser: UserData): Promise<TaskData> {
-		// TODO implement
-		return {} as TaskData;
+	async create(publicId: string, desc: string, price: number): Promise<TaskData> {
+		const q = `INSERT INTO tasks (public_id, description, price) VALUES ($1, $2, $3) ON CONFLICT (public_id) DO UPDATE SET price = $3 RETURNING *`;
+		const res = await this._modify(q, [publicId, desc, price]);
+		return res.rows[0];
 	}
 }

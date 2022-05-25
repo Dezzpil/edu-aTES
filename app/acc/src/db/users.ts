@@ -32,7 +32,7 @@ export class Users extends AbstractModel {
 	async create(publicId: string, email: string, position: string | null): Promise<UserData> {
 		if (position === null) position = UserRoles.Worker;
 		const result = await this._modify(
-			`INSERT INTO users (public_id, role, email) VALUES ($1, $2, $3) ON CONFLICT (public_id) DO NOTHING RETURNING *`,
+			`INSERT INTO users (public_id, role, email) VALUES ($1, $2, $3) ON CONFLICT (public_id) DO UPDATE SET email = $3 RETURNING *`,
 			[publicId, position, email]
 		);
 		return result.rows[0];
