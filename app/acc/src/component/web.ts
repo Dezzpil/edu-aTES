@@ -29,7 +29,7 @@ export const web = async (pool: Pool, ch: Channel, oauth: ClientOAuth2) => {
 		const s = req.session as any;
 		if ('public_id' in s) {
 			console.log('get public_id in session');
-			return await um.findById(s.public_id);
+			return await um.findByPublicId(s.public_id);
 		}
 		if ('token' in s) {
 			console.log('get token in session');
@@ -42,7 +42,7 @@ export const web = async (pool: Pool, ch: Channel, oauth: ClientOAuth2) => {
 			});
 			if (result.data === null) throw new Error('no data for current user by token');
 			s.public_id = result.data.public_id;
-			return await um.findById(s.public_id);
+			return await um.findByPublicId(s.public_id);
 		}
 
 		throw new Error(`no token`);
@@ -130,7 +130,7 @@ export const web = async (pool: Pool, ch: Channel, oauth: ClientOAuth2) => {
 		const user = await getAuthedUser(req);
 
 		// TODO проверка принадлжености таски
-		let task = await tm.findById(req.body.id);
+		let task = await tm.findByPublicId(req.body.id);
 		task = await tm.complete(task, user);
 
 		const json = toJSON('TaskCompleted', 1, {

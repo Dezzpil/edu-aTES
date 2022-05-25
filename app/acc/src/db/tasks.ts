@@ -15,7 +15,7 @@ export class Tasks extends AbstractModel {
 		super(pool);
 	}
 
-	async findById(id: string): Promise<TaskData> {
+	async findByPublicId(id: string): Promise<TaskData> {
 		const tasks = await this._find<TaskData[]>('SELECT * FROM tasks WHERE id = $1', [id]);
 		return tasks[0];
 	}

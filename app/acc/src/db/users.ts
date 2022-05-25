@@ -19,7 +19,7 @@ export class Users extends AbstractModel {
 		super(pool);
 	}
 
-	async findById(publicId: string): Promise<UserData> {
+	async findByPublicId(publicId: string): Promise<UserData> {
 		const users = await this._find<UserData[]>(`SELECT * FROM users WHERE public_id = $1`, [publicId]);
 		return users[0];
 	}

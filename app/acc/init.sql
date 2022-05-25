@@ -1,10 +1,10 @@
-CREATE TYPE userrole AS ENUM ('admin', 'manager', 'worker');
+CREATE TYPE user_role AS ENUM ('admin', 'manager', 'worker');
 
 CREATE TABLE users (
     id serial,
     public_id text not null,
     email text not null,
-    role userrole not null ,
+    role user_role not null ,
     PRIMARY KEY (id)
 );
 
@@ -26,5 +26,34 @@ CREATE TABLE tasks (
     price numeric,
     PRIMARY KEY (id)
 );
+
+CREATE DOMAIN uint AS integer NOT NULL CHECK ( VALUE >= 0 );
+CREATE TYPE transaction_type AS ENUM ('enrollment', 'withdrawal', 'payment');
+
+CREATE TABLE transactions (
+    id serial,
+    created_at timestamp default current_timestamp,
+    debit uint default 0,
+    credit uint default 0,
+    user_id integer not null,
+    type transaction_type,
+    task_id integer null,
+    PRIMARY KEY (id)
+);
+
+CREATE TABLE payments (
+    id serial,
+    transaction_id integer not null,
+    value uint
+)
+
+-- CREATE TABLE billing_cycles (
+--     id serial,
+--     created_at timestamp,
+--     user_id integer not null,
+--     debit uint default 0,
+--     credit uint default 0,
+--     PRIMARY KEY (id)
+-- )
 
 

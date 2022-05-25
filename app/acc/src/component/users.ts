@@ -93,7 +93,7 @@ export const users = async (pool: Pool, ch: Channel) => {
 						switch (event.event_version) {
 							case 1: {
 								const data = (event as AccountRoleChanged1).data;
-								const user = await um.findById(data.public_id);
+								const user = await um.findByPublicId(data.public_id);
 								await um.changeRole(user, data.role);
 								const balance = await bm.findForUser(user);
 								if (!balance) await bm.create(user);
