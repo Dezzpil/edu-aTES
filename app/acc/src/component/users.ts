@@ -1,33 +1,20 @@
 import { Pool } from 'pg';
-import client, { Channel, ConsumeMessage } from 'amqplib';
-import { fromJSON } from '../../../esr/event';
+import { Channel } from 'amqplib';
 import { QueueUsersBE, QueueUsersCUD } from '../../../esr/queues';
 import { AccountCreated1 } from '../../../esr/events/account/created/1';
 import { AccountCreated2 } from '../../../esr/events/account/created/2';
 import { AccountRoleChanged1 } from '../../../esr/events/account/role-changed/1';
-import { Event } from '../../../esr/event';
 import { AccountUpdated1 } from '../../../esr/events/account/updated/1';
-
-function validateEventFromMessage(msg: ConsumeMessage | null): Event | null {
-	if (msg) {
-		console.log('consumed message');
-		try {
-			const event = fromJSON<Event>(msg.content.toString());
-			console.log(event);
-			return event;
-		} catch (e: any) {
-			// TODO работа с ошибками;
-			console.error(e);
-		}
-	}
-	return null;
-}
+import { Balances } from '../db/balances';
+import { Users } from '../db/users';
+import { validateEventFromMessage } from '../helpers';
 
 export const users = async (pool: Pool, ch: Channel) => {
 	await ch.assertQueue(QueueUsersCUD, { durable: true });
 	await ch.assertQueue(QueueUsersBE, { durable: true });
 
 	const um = new Users(pool);
+	const bm = new Balances(pool);
 
 	await ch.consume(
 		QueueUsersCUD,
@@ -39,13 +26,25 @@ export const users = async (pool: Pool, ch: Channel) => {
 						switch (event.event_version) {
 							case 1: {
 								const data = (event as AccountCreated1).data;
-								await um.create(data.public_id, data.email, data.position, data.full_name);
+								const user = await um.create(
+									data.public_id,
+									data.email,
+									data.position,
+									data.full_name
+								);
+								await bm.create(user);
 								break;
 							}
 							case 2: {
 								const data = (event as AccountCreated2).data;
 								const fullName = [data.last_name, data.first_name].join();
-								await um.create(data.public_id, data.email, data.position, fullName);
+								const user = await um.create(
+									data.public_id,
+									data.email,
+									data.position,
+									fullName
+								);
+								await bm.create(user);
 								break;
 							}
 							default: {
@@ -58,7 +57,14 @@ export const users = async (pool: Pool, ch: Channel) => {
 						switch (event.event_version) {
 							case 1: {
 								const data = (event as AccountUpdated1).data;
-								await um.update(data.public_id, data.email, data.position, data.full_name);
+								const user = await um.update(
+									data.public_id,
+									data.email,
+									data.position,
+									data.full_name
+								);
+								const balance = await bm.findForUser(user);
+								if (!balance) await bm.create(user);
 								break;
 							}
 							default: {
@@ -89,6 +95,8 @@ export const users = async (pool: Pool, ch: Channel) => {
 								const data = (event as AccountRoleChanged1).data;
 								const user = await um.findById(data.public_id);
 								await um.changeRole(user, data.role);
+								const balance = await bm.findForUser(user);
+								if (!balance) await bm.create(user);
 							}
 						}
 					}

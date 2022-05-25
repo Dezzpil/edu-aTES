@@ -2,6 +2,7 @@ import { Pool } from 'pg';
 import { AbstractModel } from './model';
 
 export interface UserData {
+	id?: number;
 	public_id: string;
 	email: string;
 	role: string;

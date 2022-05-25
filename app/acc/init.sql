@@ -23,11 +23,6 @@ CREATE TABLE tasks (
     id serial,
     public_id text,
     description text,
-    status smallint,
-	assigned_at timestamp,
-    assigned_to_public_id text,
-	completed_at timestamp,
-    completed_by_public_id text,
     price numeric,
     PRIMARY KEY (id)
 );
