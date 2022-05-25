@@ -28,7 +28,7 @@ export const getUser = async (publicId: string, um: Users): Promise<UserData> =>
 	try {
 		user = await um.findByPublicId(publicId);
 	} catch (e: any) {
-		user = await um.create(publicId, '', UserRoles.Worker, '');
+		user = await um.create(publicId, '', UserRoles.Worker);
 	}
 	return user;
 };

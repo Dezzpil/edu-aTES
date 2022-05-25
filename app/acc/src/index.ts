@@ -1,5 +1,8 @@
 import { Pool } from 'pg';
 import client from 'amqplib';
+import { users } from './component/users';
+import { tasks } from './component/tasks';
+import { web } from './component/web';
 
 (async () => {
 	// TODO add dotenv
@@ -23,7 +26,8 @@ import client from 'amqplib';
 
 	const conn = await client.connect('amqp://127.0.0.1:5672');
 	const ch = await conn.createChannel();
-	//
-	// await users(pool, ch);
-	// await web(pool, ch, oauth);
+
+	await users(pool, ch);
+	await tasks(pool, ch);
+	await web(pool, ch, oauth);
 })();

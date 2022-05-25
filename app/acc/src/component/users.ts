@@ -5,7 +5,6 @@ import { AccountCreated1 } from '../../../esr/events/account/created/1';
 import { AccountCreated2 } from '../../../esr/events/account/created/2';
 import { AccountRoleChanged1 } from '../../../esr/events/account/role-changed/1';
 import { AccountUpdated1 } from '../../../esr/events/account/updated/1';
-import { Balances } from '../db/balances';
 import { Users } from '../db/users';
 import { validateEventFromMessage } from '../helpers';
 
@@ -14,7 +13,6 @@ export const users = async (pool: Pool, ch: Channel) => {
 	await ch.assertQueue(QueueUsersBE, { durable: true });
 
 	const um = new Users(pool);
-	const bm = new Balances(pool);
 
 	await ch.consume(
 		QueueUsersCUD,
@@ -22,6 +20,7 @@ export const users = async (pool: Pool, ch: Channel) => {
 			const event = validateEventFromMessage(msg);
 			if (event) {
 				switch (event.event_name) {
+					// TODO добавить учет имени пользователя
 					case 'AccountCreated': {
 						switch (event.event_version) {
 							case 1: {
@@ -29,22 +28,22 @@ export const users = async (pool: Pool, ch: Channel) => {
 								const user = await um.create(
 									data.public_id,
 									data.email,
-									data.position,
-									data.full_name
+									data.position
+									// data.full_name
 								);
-								await bm.create(user);
+								console.log(`user created ${user}`);
 								break;
 							}
 							case 2: {
 								const data = (event as AccountCreated2).data;
-								const fullName = [data.last_name, data.first_name].join();
+								// const fullName = [data.last_name, data.first_name].join();
 								const user = await um.create(
 									data.public_id,
 									data.email,
-									data.position,
-									fullName
+									data.position
+									// fullName
 								);
-								await bm.create(user);
+								console.log(`user created ${user}`);
 								break;
 							}
 							default: {
@@ -53,18 +52,13 @@ export const users = async (pool: Pool, ch: Channel) => {
 						}
 						break;
 					}
+					// TODO добавить учет имени пользователя
 					case 'AccountUpdated': {
 						switch (event.event_version) {
 							case 1: {
 								const data = (event as AccountUpdated1).data;
-								const user = await um.update(
-									data.public_id,
-									data.email,
-									data.position,
-									data.full_name
-								);
-								const balance = await bm.findForUser(user);
-								if (!balance) await bm.create(user);
+								const user = await um.upsert(data.public_id, data.email, data.position);
+								console.log(`user updated ${user}`);
 								break;
 							}
 							default: {
@@ -94,9 +88,8 @@ export const users = async (pool: Pool, ch: Channel) => {
 							case 1: {
 								const data = (event as AccountRoleChanged1).data;
 								const user = await um.findByPublicId(data.public_id);
-								await um.changeRole(user, data.role);
-								const balance = await bm.findForUser(user);
-								if (!balance) await bm.create(user);
+								const userUpdated = await um.changeRole(user, data.role);
+								console.log(`user role changed ${user}`);
 							}
 						}
 					}

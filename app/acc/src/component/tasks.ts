@@ -1,14 +1,13 @@
 import { Pool } from 'pg';
 import { Channel, ConsumeMessage } from 'amqplib';
 import { QueueTaskBE, QueueTaskCUD } from '../../../esr/queues';
-import { TaskData, Tasks } from '../db/tasks';
-import { Balances } from '../db/balances';
+import { Tasks } from '../db/tasks';
 import { getTask, getUser, validateEventFromMessage } from '../helpers';
 import { DataTaskCreated1 } from '../../../esr/events/task/created/1';
-import { calculatePrice } from './price';
+import { calculatePrice, getRandomInt } from './price';
 import { DataTaskReassign1 } from '../../../esr/events/task/reassign/1';
-import { UserData, UserRoles, Users } from '../db/users';
-import { Transactions, TransactionType } from '../db/transactions';
+import { Users } from '../db/users';
+import { Transactions } from '../db/transactions';
 import { DataTaskCompleted1 } from '../../../esr/events/task/completed/1';
 
 export const tasks = async (pool: Pool, ch: Channel) => {
@@ -17,7 +16,6 @@ export const tasks = async (pool: Pool, ch: Channel) => {
 
 	const um = new Users(pool);
 	const tm = new Tasks(pool);
-	const bm = new Balances(pool);
 	const trm = new Transactions(pool);
 
 	await ch.consume(QueueTaskCUD, async (msg: ConsumeMessage | null) => {
@@ -51,7 +49,8 @@ export const tasks = async (pool: Pool, ch: Channel) => {
 							const task = await getTask(data.public_id, tm);
 							const worker = await getUser(data.account_public_id, um);
 							const cost = getRandomInt(10, 20);
-							await trm.withdraw(worker, task, cost);
+							const transaction = await trm.withdraw(worker, task, cost);
+							console.log(`task reassigned ${transaction}`);
 							break;
 						default: {
 							throw new Error(`not implemented`);
@@ -65,7 +64,8 @@ export const tasks = async (pool: Pool, ch: Channel) => {
 							const data = event.data as DataTaskCompleted1;
 							const task = await getTask(data.public_id, tm);
 							const worker = await getUser(data.account_public_id, um);
-							await trm.enroll(worker, task);
+							const transaction = await trm.enroll(worker, task);
+							console.log(`task completed ${transaction}`);
 							break;
 						default: {
 							throw new Error(`not implemented`);

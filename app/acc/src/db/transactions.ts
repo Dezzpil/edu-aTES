@@ -1,7 +1,7 @@
 import { AbstractModel } from './model';
 import { Pool } from 'pg';
 import { TaskData } from './tasks';
-import { UserData } from './users';
+import { UserData, UserRoles } from './users';
 
 export enum TransactionType {
 	Transfer = 0, // перевод средств
@@ -18,6 +18,12 @@ export interface TransactionData {
 	user_id: number;
 	type: TransactionType;
 	task_id: number | null;
+}
+
+export interface ManagementDebitSum {
+	user_id: number;
+	count: number;
+	debit: number;
 }
 
 export class Transactions extends AbstractModel {
@@ -48,5 +54,15 @@ export class Transactions extends AbstractModel {
 		const q = `INSERT INTO transactions (user_id, type, credit) VALUES ($1, $2, $3) RETURNING *`;
 		const res = await this._modify(q, [to.id, TransactionType.Payment, value]);
 		return res.rows[0];
+	}
+
+	async findForWorker(user: UserData): Promise<TransactionData[]> {
+		const q = `SELECT * FROM transactions WHERE user_id = $1 ORDER BY created_at DESC LIMIT 20`;
+		return this._find<TransactionData[]>(q, [user.id]);
+	}
+
+	async findAggForManagement(): Promise<ManagementDebitSum[]> {
+		const q = `SELECT t.user_id as user_id, COUNT(*) as count, SUM(t.debit) FROM transactions t LEFT JOIN users u ON t.user_id = u.id WHERE u.role = $1 GROUP BY t.user_id`;
+		return this._find<ManagementDebitSum[]>(q, [UserRoles.Manager]);
 	}
 }

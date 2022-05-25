@@ -10,15 +10,6 @@ CREATE TABLE users (
 
 INSERT INTO users (public_id, email, role) VALUES ('59bd60f5-ac22-4161-a2a0-a5bf1e64973d', 'n.dezz.orlov@yandex.com', 'admin');
 
-CREATE TABLE balances (
-    id serial,
-    user_id integer not null unique,
-    value bigint default 0,
-    PRIMARY KEY (id)
-);
-
-INSERT INTO balances (user_id) VALUES (1);
-
 CREATE TABLE tasks (
     id serial,
     public_id text,
@@ -45,7 +36,7 @@ CREATE TABLE payments (
     id serial,
     transaction_id integer not null,
     value uint
-)
+);
 
 -- CREATE TABLE billing_cycles (
 --     id serial,
@@ -56,4 +47,8 @@ CREATE TABLE payments (
 --     PRIMARY KEY (id)
 -- )
 
-
+CREATE VIEW balances (
+    user_id, value
+) AS (
+    SELECT u.id, (t.debit - t.credit) FROM users u LEFT JOIN transactions t on u.id = t.user_id
+);
