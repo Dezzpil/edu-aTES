@@ -2,7 +2,7 @@ CREATE TYPE user_role AS ENUM ('admin', 'manager', 'worker');
 
 CREATE TABLE users (
     id serial,
-    public_id text not null,
+    public_id text unique not null,
     email text not null,
     role user_role not null ,
     PRIMARY KEY (id)
@@ -12,7 +12,7 @@ INSERT INTO users (public_id, email, role) VALUES ('59bd60f5-ac22-4161-a2a0-a5bf
 
 CREATE TABLE tasks (
     id serial,
-    public_id text,
+    public_id text unique not null,
     description text,
     price numeric,
     PRIMARY KEY (id)
