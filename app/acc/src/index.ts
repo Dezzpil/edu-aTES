@@ -25,9 +25,8 @@ import { web } from './component/web';
 	});
 
 	const conn = await client.connect('amqp://127.0.0.1:5672');
-	const ch = await conn.createChannel();
 
-	await users(pool, ch);
-	await tasks(pool, ch);
-	await web(pool, ch, oauth);
+	await users(pool, conn);
+	await tasks(pool, conn);
+	await web(pool, conn, oauth);
 })();

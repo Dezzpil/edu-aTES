@@ -2,7 +2,7 @@ import express = require('express');
 import { UserData, UserRoles, Users } from '../db/users';
 import { TwingEnvironment, TwingLoaderFilesystem } from 'twing';
 import { Pool } from 'pg';
-import { Channel } from 'amqplib';
+import { Channel, Connection } from 'amqplib';
 import ClientOAuth2 from 'client-oauth2';
 import session from 'express-session';
 import bodyParser from 'body-parser';
@@ -13,19 +13,17 @@ import { inspect } from 'util';
 const cors = require('cors');
 const axios = require('axios').default;
 
-export const web = async (pool: Pool, ch: Channel, oauth: ClientOAuth2) => {
+export const web = async (pool: Pool, conn: Connection, oauth: ClientOAuth2) => {
 	const um = new Users(pool);
 	const trm = new Transactions(pool);
 
-	// TODO вынести в библиотеку, т.к. дублируется в tt и здесь
+	// TODO дублируется в tt и здесь
 	const getAuthedUser = async (req: express.Request): Promise<UserData> => {
 		const s = req.session as any;
 		if ('public_id' in s) {
-			console.log('get public_id in session');
 			return await um.findByPublicId(s.public_id);
 		}
 		if ('token' in s) {
-			console.log('get token in session');
 			const url = 'http://127.0.0.1:3000/accounts/current.json';
 			const result = await axios.get(url, {
 				headers: {
@@ -43,10 +41,10 @@ export const web = async (pool: Pool, ch: Channel, oauth: ClientOAuth2) => {
 
 	const loader = new TwingLoaderFilesystem(__dirname + '/../view');
 	const twing = new TwingEnvironment(loader);
+
 	const app = express();
 
 	const staticPath = resolve(__dirname + '../../../public');
-
 	app.use(express.static(staticPath));
 	app.use(bodyParser.urlencoded({ extended: true }));
 	app.use(bodyParser.json());
@@ -70,12 +68,11 @@ export const web = async (pool: Pool, ch: Channel, oauth: ClientOAuth2) => {
 
 		// @ts-ignore
 		req.session.token = token;
-
-		console.log(`Token saved: ${result.accessToken}`);
 		res.redirect('/');
 	});
 
 	app.get('/', async (req: express.Request, res: express.Response) => {
+		console.log('/');
 		let user: UserData;
 		try {
 			user = await getAuthedUser(req);
@@ -89,16 +86,16 @@ export const web = async (pool: Pool, ch: Channel, oauth: ClientOAuth2) => {
 
 		const context = {
 			user: inspect(user),
-			transactions: inspect([]),
+			transactions: [] as any[],
 		};
 
 		let name: string;
 		if (user.role === UserRoles.Worker) {
 			name = 'workers.twig';
-			context.transactions = inspect(await trm.findForWorker(user));
+			context.transactions = await trm.findForWorker(user);
 		} else {
 			name = 'management.twig';
-			context.transactions = inspect(await trm.findAggForManagement());
+			context.transactions = await trm.findAggForManagement();
 		}
 
 		res.end(await twing.render(name, context));

@@ -4,7 +4,7 @@ import { randomInt } from 'crypto';
 import { TwingEnvironment, TwingLoaderFilesystem } from 'twing';
 import { Tasks } from '../db/tasks';
 import { Pool } from 'pg';
-import { Channel, Connection } from 'amqplib';
+import { Connection } from 'amqplib';
 import { toJSON } from '../../../esr/event';
 import { DataTaskCreated1 } from '../../../esr/events/task/created/1';
 import { DataTaskCompleted1 } from '../../../esr/events/task/completed/1';
@@ -25,6 +25,7 @@ export const web = async (pool: Pool, conn: Connection, oauth: ClientOAuth2) => 
 
 	const chCUD = await conn.createChannel();
 	await chCUD.assertExchange(ExchangeTasksCUD, 'fanout', { durable: false });
+
 	const chBE = await conn.createChannel();
 	await chBE.assertExchange(ExchangeTasksBE, 'fanout', { durable: false });
 

@@ -4,10 +4,9 @@ import { TaskData } from './tasks';
 import { UserData, UserRoles } from './users';
 
 export enum TransactionType {
-	Transfer = 0, // перевод средств
-	Enrollment = 1, // зачисление средств
-	Withdrawal = 2, // списание средств
-	Payment = 3, // выплата
+	Enrollment = 'enrollment', // зачисление средств
+	Withdrawal = 'withdrawal', // списание средств
+	Payment = 'payment', // выплата
 }
 
 export interface TransactionData {

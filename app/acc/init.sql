@@ -50,5 +50,5 @@ CREATE TABLE payments (
 CREATE VIEW balances (
     user_id, value
 ) AS (
-    SELECT u.id, (t.debit - t.credit) FROM users u LEFT JOIN transactions t on u.id = t.user_id
+     SELECT u.id, (t.debit - t.credit) as value FROM users u LEFT JOIN transactions t on u.id = t.user_id ORDER BY u.id DESC
 );

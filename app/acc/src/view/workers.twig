@@ -2,5 +2,25 @@
 
 {% block content %}
     <pre>{{ user }}</pre>
-    <pre>{{ transactions }}</pre>
+    <h3>Transactions</h3>
+    <table class="u-full-width">
+        <thead>
+        <tr>
+            <th>Тип</th>
+            <th>Дебет</th>
+            <th>Кредит</th>
+            <th>Задача ID</th>
+        </tr>
+        </thead>
+        <tbody>
+        {% for tr in transactions %}
+        <tr>
+            <td>{{ tr.type }}</td>
+            <td>{{ tr.debit }}</td>
+            <td>{{ tr.credit }}</td>
+            <td>{{ tr.task_id }}</td>
+        </tr>
+        {% endfor %}
+        </tbody>
+    </table>
 {% endblock %}

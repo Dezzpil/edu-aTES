@@ -1,6 +1,6 @@
 import { Pool } from 'pg';
-import { Channel, ConsumeMessage } from 'amqplib';
-import { QueueTaskBE, QueueTaskCUD } from '../../../esr/queues';
+import { Connection, ConsumeMessage } from 'amqplib';
+import { ExchangeTasksBE, ExchangeTasksCUD } from '../../../esr/names';
 import { Tasks } from '../db/tasks';
 import { getTask, getUser, validateEventFromMessage } from '../helpers';
 import { DataTaskCreated1 } from '../../../esr/events/task/created/1';
@@ -11,15 +11,16 @@ import { Transactions } from '../db/transactions';
 import { DataTaskCompleted1 } from '../../../esr/events/task/completed/1';
 import { inspect } from 'util';
 
-export const tasks = async (pool: Pool, ch: Channel) => {
-	await ch.assertQueue(QueueTaskCUD, { durable: true });
-	await ch.assertQueue(QueueTaskBE, { durable: true });
-
+export const tasks = async (pool: Pool, conn: Connection) => {
 	const um = new Users(pool);
 	const tm = new Tasks(pool);
 	const trm = new Transactions(pool);
 
-	await ch.consume(QueueTaskCUD, async (msg: ConsumeMessage | null) => {
+	const chCUD = await conn.createChannel();
+	await chCUD.assertExchange(ExchangeTasksCUD, 'fanout', { durable: false });
+	const qCUD = await chCUD.assertQueue('', { exclusive: true });
+	await chCUD.bindQueue(qCUD.queue, ExchangeTasksCUD, '');
+	await chCUD.consume(qCUD.queue, async (msg: ConsumeMessage | null) => {
 		const event = validateEventFromMessage(msg);
 		if (event) {
 			switch (event.event_name) {
@@ -39,7 +40,11 @@ export const tasks = async (pool: Pool, ch: Channel) => {
 		}
 	});
 
-	await ch.consume(QueueTaskBE, async (msg: ConsumeMessage | null) => {
+	const chBE = await conn.createChannel();
+	await chBE.assertExchange(ExchangeTasksBE, 'fanout', { durable: false });
+	const qBE = await chBE.assertQueue('', { exclusive: true });
+	await chBE.bindQueue(qBE.queue, ExchangeTasksBE, '');
+	await chBE.consume(qBE.queue, async (msg: ConsumeMessage | null) => {
 		const event = validateEventFromMessage(msg);
 		if (event) {
 			switch (event.event_name) {

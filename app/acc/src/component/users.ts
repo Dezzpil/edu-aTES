@@ -1,6 +1,6 @@
 import { Pool } from 'pg';
 import { Channel, Connection } from 'amqplib';
-import { ExchangeUsersBE, ExchangeUsersCUD } from '../../../esr/queues';
+import { ExchangeUsersBE, ExchangeUsersCUD } from '../../../esr/names';
 import { AccountCreated1 } from '../../../esr/events/account/created/1';
 import { AccountCreated2 } from '../../../esr/events/account/created/2';
 import { AccountRoleChanged1 } from '../../../esr/events/account/role-changed/1';
