@@ -1,36 +1,23 @@
 import { Pool } from 'pg';
-import client, { Channel, ConsumeMessage } from 'amqplib';
+import { Channel, Connection } from 'amqplib';
 import { Users } from '../db/users';
-import { Event, fromJSON } from '../../../esr/event';
+import { validateEventFromMessage } from '../../../esr/event';
 import { AccountCreated1 } from '../../../esr/events/account/created/1';
 import { AccountCreated2 } from '../../../esr/events/account/created/2';
 import { AccountUpdated1 } from '../../../esr/events/account/updated/1';
 import { AccountRoleChanged1 } from '../../../esr/events/account/role-changed/1';
-import { QueueUsersBE, QueueUsersCUD } from '../../../esr/queues';
+import { ExchangeUsersBE, ExchangeUsersCUD } from '../../../esr/names';
+import { inspect } from 'util';
 
-function validateEventFromMessage(msg: ConsumeMessage | null): Event | null {
-	if (msg) {
-		console.log('consumed message');
-		try {
-			const event = fromJSON<Event>(msg.content.toString());
-			console.log(event);
-			return event;
-		} catch (e: any) {
-			// TODO работа с ошибками;
-			console.log(e);
-		}
-	}
-	return null;
-}
-
-export const users = async (pool: Pool, ch: Channel) => {
-	await ch.assertQueue(QueueUsersCUD, { durable: true });
-	await ch.assertQueue(QueueUsersBE, { durable: true });
-
+export const users = async (pool: Pool, conn: Connection) => {
 	const um = new Users(pool);
 
-	await ch.consume(
-		QueueUsersCUD,
+	const chCUD = await conn.createChannel();
+	await chCUD.assertExchange(ExchangeUsersCUD, 'fanout', { durable: false });
+	const qCUD = await chCUD.assertQueue('', { exclusive: true });
+	await chCUD.bindQueue(qCUD.queue, ExchangeUsersCUD, '');
+	await chCUD.consume(
+		qCUD.queue,
 		async msg => {
 			const event = validateEventFromMessage(msg);
 			if (event) {
@@ -39,13 +26,25 @@ export const users = async (pool: Pool, ch: Channel) => {
 						switch (event.event_version) {
 							case 1: {
 								const data = (event as AccountCreated1).data;
-								await um.create(data.public_id, data.email, data.position, data.full_name);
+								const user = await um.create(
+									data.public_id,
+									data.email,
+									data.position,
+									data.full_name
+								);
+								console.log(`user created ${inspect(user)}`);
 								break;
 							}
 							case 2: {
 								const data = (event as AccountCreated2).data;
 								const fullName = [data.last_name, data.first_name].join();
-								await um.create(data.public_id, data.email, data.position, fullName);
+								const user = await um.create(
+									data.public_id,
+									data.email,
+									data.position,
+									fullName
+								);
+								console.log(`user created ${inspect(user)}`);
 								break;
 							}
 							default: {
@@ -58,7 +57,13 @@ export const users = async (pool: Pool, ch: Channel) => {
 						switch (event.event_version) {
 							case 1: {
 								const data = (event as AccountUpdated1).data;
-								await um.update(data.public_id, data.email, data.position, data.full_name);
+								const user = await um.upsert(
+									data.public_id,
+									data.email,
+									data.position,
+									data.full_name
+								);
+								console.log(`user updated ${inspect(user)}`);
 								break;
 							}
 							default: {
@@ -77,8 +82,12 @@ export const users = async (pool: Pool, ch: Channel) => {
 		{ noAck: false }
 	);
 
-	await ch.consume(
-		QueueUsersBE,
+	const chBE = await conn.createChannel();
+	await chBE.assertExchange(ExchangeUsersBE, 'fanout', { durable: false });
+	const qBE = await chBE.assertQueue('', { exclusive: true });
+	await chBE.bindQueue(qBE.queue, ExchangeUsersBE, '');
+	await chBE.consume(
+		qBE.queue,
 		async msg => {
 			const event = validateEventFromMessage(msg);
 			if (event) {
@@ -88,9 +97,18 @@ export const users = async (pool: Pool, ch: Channel) => {
 							case 1: {
 								const data = (event as AccountRoleChanged1).data;
 								const user = await um.findById(data.public_id);
-								await um.changeRole(user, data.role);
+								const userUpdated = await um.changeRole(user, data.role);
+								console.log(`user role changed ${inspect(userUpdated)}`);
+								break;
+							}
+							default: {
+								throw new Error('not implemented');
 							}
 						}
+						break;
+					}
+					default: {
+						throw new Error(`not implemented`);
 					}
 				}
 			}

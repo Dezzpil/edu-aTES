@@ -58,11 +58,11 @@ export class Transactions extends AbstractModel {
 
 	async findForWorker(user: UserData): Promise<TransactionData[]> {
 		const q = `SELECT * FROM transactions WHERE user_id = $1 ORDER BY created_at DESC LIMIT 20`;
-		return this._find<TransactionData[]>(q, [user.id]);
+		return this._find<TransactionData[]>(q, [user.id], false);
 	}
 
 	async findAggForManagement(): Promise<ManagementDebitSum[]> {
 		const q = `SELECT t.user_id as user_id, COUNT(*) as count, SUM(t.debit) FROM transactions t LEFT JOIN users u ON t.user_id = u.id WHERE u.role = $1 GROUP BY t.user_id`;
-		return this._find<ManagementDebitSum[]>(q, [UserRoles.Manager]);
+		return this._find<ManagementDebitSum[]>(q, [UserRoles.Manager], false);
 	}
 }

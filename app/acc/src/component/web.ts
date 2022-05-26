@@ -8,6 +8,7 @@ import session from 'express-session';
 import bodyParser from 'body-parser';
 import { resolve } from 'path';
 import { Transactions } from '../db/transactions';
+import { inspect } from 'util';
 
 const cors = require('cors');
 const axios = require('axios').default;
@@ -86,20 +87,21 @@ export const web = async (pool: Pool, ch: Channel, oauth: ClientOAuth2) => {
 			return;
 		}
 
-		let out: string;
+		const context = {
+			user: inspect(user),
+			transactions: inspect([]),
+		};
+
+		let name: string;
 		if (user.role === UserRoles.Worker) {
-			out = await twing.render('workers.twig', {
-				user,
-				transactions: trm.findForWorker(user),
-			});
+			name = 'workers.twig';
+			context.transactions = inspect(await trm.findForWorker(user));
 		} else {
-			out = await twing.render('management.twig', {
-				user,
-				transactions: trm.findAggForManagement(),
-			});
+			name = 'management.twig';
+			context.transactions = inspect(await trm.findAggForManagement());
 		}
 
-		res.end(out);
+		res.end(await twing.render(name, context));
 		res.end('/');
 	});
 

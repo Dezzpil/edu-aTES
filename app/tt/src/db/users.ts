@@ -35,38 +35,31 @@ export class Users extends AbstractModel {
 	}
 
 	async create(
-		public_id: string,
+		publicId: string,
 		email: string,
 		position: string | null,
 		name: string | null
 	): Promise<UserData> {
-		const user = {
-			public_id,
-			email,
-			role: position || UserRoles.Admin,
-		} as UserData;
-		const result = await this._modify(`INSERT INTO users (public_id, role, email) VALUES ($1, $2, $3)`, [
-			user.public_id,
-			user.role,
-			user.email,
-		]);
+		if (!position) position = UserRoles.Manager;
+		const q = `INSERT INTO users (public_id, role, email) VALUES ($1, $2, $3) ON CONFLICT (public_id) DO UPDATE SET email = $3 RETURNING *`;
+		const result = await this._modify(q, [publicId, position, email]);
 		return result.rows[0];
 	}
 
-	async update(
-		public_id: string,
+	async upsert(
+		publicId: string,
 		email: string,
 		position: string | null,
 		name: string | null
 	): Promise<UserData> {
-		// TODO implement
-		const r = await this._find<UserData[]>(`SELECT * FROM users WHERE public_id = $1`, [public_id]);
-		return r[0];
+		if (!position) position = UserRoles.Worker;
+		const q = `INSERT INTO users (public_id, email, role) VALUES ($1, $2, $3) ON CONFLICT (public_id) DO UPDATE SET email = $2 RETURNING *`;
+		const res = await this._modify(q, [publicId, email, position]);
+		return res.rows[0];
 	}
 
 	async changeRole(user: UserData, role: string) {
-		user.role = role;
-		const q = `UPDATE users SET role=$1 WHERE public_id=$2`;
+		const q = `UPDATE users SET role=$1 WHERE public_id=$2 RETURNING *`;
 		const res = await this._modify(q, [role, user.public_id]);
 		return res.rows[0];
 	}

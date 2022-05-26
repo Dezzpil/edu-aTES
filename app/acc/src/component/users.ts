@@ -1,6 +1,6 @@
 import { Pool } from 'pg';
-import { Channel } from 'amqplib';
-import { QueueUsersBE, QueueUsersCUD } from '../../../esr/queues';
+import { Channel, Connection } from 'amqplib';
+import { ExchangeUsersBE, ExchangeUsersCUD } from '../../../esr/queues';
 import { AccountCreated1 } from '../../../esr/events/account/created/1';
 import { AccountCreated2 } from '../../../esr/events/account/created/2';
 import { AccountRoleChanged1 } from '../../../esr/events/account/role-changed/1';
@@ -9,14 +9,15 @@ import { Users } from '../db/users';
 import { validateEventFromMessage } from '../helpers';
 import { inspect } from 'util';
 
-export const users = async (pool: Pool, ch: Channel) => {
-	await ch.assertQueue(QueueUsersCUD, { durable: true });
-	await ch.assertQueue(QueueUsersBE, { durable: true });
-
+export const users = async (pool: Pool, conn: Connection) => {
 	const um = new Users(pool);
 
-	await ch.consume(
-		QueueUsersCUD,
+	const chCUD = await conn.createChannel();
+	await chCUD.assertExchange(ExchangeUsersCUD, 'fanout', { durable: false });
+	const qCUD = await chCUD.assertQueue('', { exclusive: true });
+	await chCUD.bindQueue(qCUD.queue, ExchangeUsersCUD, '');
+	await chCUD.consume(
+		qCUD.queue,
 		async msg => {
 			const event = validateEventFromMessage(msg);
 			if (event) {
@@ -78,8 +79,12 @@ export const users = async (pool: Pool, ch: Channel) => {
 		{ noAck: false }
 	);
 
-	await ch.consume(
-		QueueUsersBE,
+	const chBE = await conn.createChannel();
+	await chBE.assertExchange(ExchangeUsersBE, 'fanout', { durable: false });
+	const qBE = await chBE.assertQueue('', { exclusive: true });
+	await chBE.bindQueue(qBE.queue, ExchangeUsersBE, '');
+	await chBE.consume(
+		qBE.queue,
 		async msg => {
 			const event = validateEventFromMessage(msg);
 			if (event) {
@@ -90,7 +95,7 @@ export const users = async (pool: Pool, ch: Channel) => {
 								const data = (event as AccountRoleChanged1).data;
 								const user = await um.findByPublicId(data.public_id);
 								const userUpdated = await um.changeRole(user, data.role);
-								console.log(`user role changed ${inspect(user)}`);
+								console.log(`user role changed ${inspect(userUpdated)}`);
 							}
 						}
 					}

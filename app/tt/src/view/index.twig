@@ -1,6 +1,8 @@
 {% extends "template.twig" %}
 
 {% block content %}
+    <pre>{{ userStr }}</pre>
+
     {% if isAdmin %}
         <form method="post" action="/create">
             <div class="row">
@@ -30,7 +32,7 @@
                         <span>{{ task.description }}</span>
                         <small style="color: darkgray">{{ task.assigned_at }}</small>
                     </div>
-                    {% if user.public_id == task.assigned_to %}
+                    {% if user.public_id is same as (task.assigned_to) %}
                         <input type="hidden" name="id" value="{{ task.id }}">
                         <input type="submit" value="Выполнить">
                     {% else %}

@@ -4,6 +4,7 @@ import { SCHEMAS_DIR } from './build';
 import { inspect } from 'util';
 import { join } from 'path';
 import { ValidateFunction } from 'ajv';
+import { ConsumeMessage } from 'amqplib';
 const Ajv = require('ajv');
 const ajv = new Ajv(); // options can be passed, e.g. {allErrors: true}
 
@@ -57,4 +58,19 @@ export function fromJSON<T>(input: string): T {
 	} else {
 		throw new Error(`bad syntax: no 'event_name' or 'event_version' in data`);
 	}
+}
+
+export function validateEventFromMessage(msg: ConsumeMessage | null): Event | null {
+	if (msg) {
+		console.log('consumed message');
+		try {
+			const event = fromJSON<Event>(msg.content.toString());
+			console.log(event);
+			return event;
+		} catch (e: any) {
+			// TODO работа с ошибками;
+			console.log(e);
+		}
+	}
+	return null;
 }
