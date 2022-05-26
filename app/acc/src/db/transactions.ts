@@ -43,9 +43,21 @@ export class Transactions extends AbstractModel {
 	// 	return res.rows;
 	// }
 
-	async withdraw(from: UserData, task: TaskData, value: number): Promise<TransactionData> {
-		const q = `INSERT INTO transactions (user_id, type, task_id, debit) VALUES ($1, $2, $3, $4) RETURNING *`;
-		const res = await this._modify(q, [from.id, TransactionType.Withdrawal, task.id, value]);
+	async transfer(
+		worker: UserData,
+		assigner: UserData,
+		task: TaskData,
+		value: number
+	): Promise<TransactionData[]> {
+		const q = `INSERT INTO transactions (user_id, type, task_id, debit, credit) VALUES ($3, $4, $1, 0, $2), ($5, $6, $1, $2, 0) RETURNING *`;
+		const res = await this._modify(q, [
+			task.id,
+			value,
+			worker.id,
+			TransactionType.Withdrawal,
+			assigner.id,
+			TransactionType.Enrollment,
+		]);
 		return res.rows[0];
 	}
 

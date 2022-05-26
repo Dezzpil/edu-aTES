@@ -1,45 +1,48 @@
 {% extends "template.twig" %}
 
 {% block content %}
-    <pre>{{ userStr }}</pre>
+    <pre><small>{{ userStr }}</small></pre>
 
-    {% if isAdmin %}
-        <form method="post" action="/create">
-            <div class="row">
-                <div class="nine columns">
-                    <label for="desc">Описание</label>
-                    <input type="text" name="desc" id="desc" value="" placeholder="Описание задачи" style="width: 100%">
-                </div>
-                <div class="three columns">
-                    <label for="workerId">Исполнитель</label>
-                    <select name="workerId" id="workerId">
-                        {% for worker in workers %}
-                            <option value="{{ worker.public_id }}">{{ worker.email }}</option>
-                        {% endfor %}
-                    </select>
-                </div>
+    {% if notWorker %}
+        <form method="post" action="/create" class="row">
+            <div class="three columns">
+                <select name="workerId" id="workerId" style="width: 100%">
+                    {% for worker in workers %}
+                    <option value="{{ worker.public_id }}">{{ worker.email }}</option>
+                    {% endfor %}
+                </select>
             </div>
-            <input class="button-primary" type="submit" value="Зарегистрировать">
+            <div class="six columns">
+                <input type="text" name="desc" id="desc" value="" placeholder="Описание задачи" style="width: 100%">
+            </div>
+            <div class="three columns">
+                <input class="button-primary" type="submit" value="Зарегистрировать" style="float: right; width: 100%">
+            </div>
         </form>
     {% endif %}
 
     {% if tasks|length %}
-        <h2>Задачи</h2>
-        <div class="row">
-            {% for task in tasks %}
-                <form method="post" action="/complete" class="four columns">
-                    <div class="twelve columns">
-                        <span>{{ task.description }}</span>
-                        <small style="color: darkgray">{{ task.assigned_at }}</small>
-                    </div>
+        <form method="post" action="/reassign">
+            <input class="button-primary" type="submit" value="Переназначить задачи">
+        </form>
+
+        {% for task in tasks %}
+            <div class="row" style="margin-bottom: 12px;">
+                <div class="ten columns">
+                    {{ task.description }}<br>
+                    <small style="color: darkblue">
+                        {{ task.assigned_at|date("Y-m-d H:i:s") }} / <b>{{ task.email }}</b> / {{ task.public_id }}
+                    </small>
+                </div>
+                <div class="two columns">
                     {% if user.public_id is same as (task.assigned_to) %}
+                    <form method="post" action="/complete">
                         <input type="hidden" name="id" value="{{ task.id }}">
-                        <input type="submit" value="Выполнить">
-                    {% else %}
-                        <small>{{ task.email }}</small>
+                        <input type="submit" value="Выполнить" style="float: right">
+                    </form>
                     {% endif %}
-                </form>
-            {% endfor %}
-        </div>
+                </div>
+            </div>
+        {% endfor %}
     {% endif %}
 {% endblock %}

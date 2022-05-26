@@ -43,13 +43,13 @@ export class Tasks extends AbstractModel {
 			q.push(`AND t.assigned_to = $2`);
 			params.push(user.public_id);
 		}
-		q.push('ORDER BY t.created_at DESC');
+		q.push('ORDER BY t.assigned_at DESC');
 		return await this._find<TaskDateWAssignedEmail[]>(q.join(' '), params, false);
 	}
 
 	async findAllNotCompleted(): Promise<TaskDateWAssignedEmail[]> {
 		return this._find<TaskDateWAssignedEmail[]>(
-			`SELECT t.*, u.email FROM tasks t LEFT JOIN users u ON u.public_id=t.assigned_to WHERE t.status != $1`,
+			`SELECT t.*, u.email FROM tasks t LEFT JOIN users u ON u.public_id=t.assigned_to WHERE t.status != $1 ORDER BY assigned_at DESC`,
 			[TaskStatus.Completed],
 			false
 		);
@@ -59,7 +59,6 @@ export class Tasks extends AbstractModel {
 		const data = [desc, TaskStatus.New, new Date(), user.public_id, new Date(), assignToUserId];
 		const q = `INSERT INTO tasks (description, status, created_at, created_by, assigned_at, assigned_to) VALUES ($1, $2, $3, $4, $5, $6) RETURNING *`;
 		const res = await this._modify(q, data);
-		console.log(res);
 		return res.rows[0];
 	}
 

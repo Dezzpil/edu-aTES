@@ -7,5 +7,6 @@ export interface TaskReassign1 extends Event {
 
 export interface DataTaskReassign1 {
 	public_id: string;
-	account_public_id: string;
+	worker_public_id: string;
+	assigner_public_id: string;
 }

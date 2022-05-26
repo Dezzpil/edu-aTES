@@ -96,11 +96,11 @@ export const web = async (pool: Pool, conn: Connection, oauth: ClientOAuth2) => 
 			return;
 		}
 
-		const isAdmin = user.role === UserRoles.Admin;
-		const workers = await (isAdmin ? um.findWorkers() : []);
-		const tasks = await (isAdmin ? tm.findAllNotCompleted() : tm.findNonCompletedForUser(user));
+		const notWorker = user.role !== UserRoles.Worker;
+		const workers = await (notWorker ? um.findWorkers() : []);
+		const tasks = await (notWorker ? tm.findAllNotCompleted() : tm.findNonCompletedForUser(user));
 		const out = await twing.render('index.twig', {
-			isAdmin,
+			notWorker,
 			workers,
 			tasks,
 			userStr: inspect(user),

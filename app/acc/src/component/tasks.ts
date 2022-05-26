@@ -53,9 +53,10 @@ export const tasks = async (pool: Pool, conn: Connection) => {
 						case 1:
 							const data = event.data as DataTaskReassign1;
 							const task = await getTask(data.public_id, tm);
-							const worker = await getUser(data.account_public_id, um);
-							const cost = getRandomInt(10, 20);
-							const transaction = await trm.withdraw(worker, task, cost);
+							const assigner = await getUser(data.assigner_public_id, um);
+							const worker = await getUser(data.worker_public_id, um);
+							const cost = getRandomInt(10, 20); // TODO можно хранить цену реасайна в таске
+							const transaction = await trm.transfer(worker, assigner, task, cost);
 							console.log(`task reassigned ${inspect(transaction)}`);
 							break;
 						default: {
