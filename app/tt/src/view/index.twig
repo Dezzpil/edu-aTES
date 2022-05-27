@@ -8,7 +8,7 @@
             <div class="three columns">
                 <select name="workerId" id="workerId" style="width: 100%">
                     {% for worker in workers %}
-                    <option value="{{ worker.public_id }}">{{ worker.email }}</option>
+                        <option value="{{ worker.public_id }}">{{ worker.email }}</option>
                     {% endfor %}
                 </select>
             </div>
@@ -19,13 +19,14 @@
                 <input class="button-primary" type="submit" value="Зарегистрировать" style="float: right; width: 100%">
             </div>
         </form>
+        {% if tasks|length %}
+            <form method="post" action="/reassign">
+                <input class="button-primary" type="submit" value="Переназначить задачи">
+            </form>
+        {% endif %}
     {% endif %}
 
     {% if tasks|length %}
-        <form method="post" action="/reassign">
-            <input class="button-primary" type="submit" value="Переназначить задачи">
-        </form>
-
         {% for task in tasks %}
             <div class="row" style="margin-bottom: 12px;">
                 <div class="ten columns">
@@ -44,5 +45,7 @@
                 </div>
             </div>
         {% endfor %}
+    {% else %}
+        <span style="color: darkgray">Задач нет...</span>
     {% endif %}
 {% endblock %}

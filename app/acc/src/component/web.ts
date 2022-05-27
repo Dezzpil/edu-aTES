@@ -9,6 +9,7 @@ import bodyParser from 'body-parser';
 import { resolve } from 'path';
 import { Transactions } from '../db/transactions';
 import { inspect } from 'util';
+import { Cycles } from '../db/cycles';
 
 const cors = require('cors');
 const axios = require('axios').default;
@@ -16,10 +17,33 @@ const axios = require('axios').default;
 export const web = async (pool: Pool, conn: Connection, oauth: ClientOAuth2) => {
 	const um = new Users(pool);
 	const trm = new Transactions(pool);
+	const cm = new Cycles(pool);
+
+	const loader = new TwingLoaderFilesystem(__dirname + '/../view');
+	const twing = new TwingEnvironment(loader);
+
+	const app = express();
+
+	const staticPath = resolve(__dirname + '../../../public');
+	app.use(express.static(staticPath));
+	app.use(bodyParser.urlencoded({ extended: true }));
+	app.use(bodyParser.json());
+	app.use(cors({ credentials: true, origin: '*' }));
+	app.use(
+		session({
+			resave: true,
+			saveUninitialized: false,
+			cookie: { secure: false, sameSite: true },
+			secret: 'lalaley',
+		})
+	);
+
+	let token: string;
 
 	// TODO дублируется в tt и здесь
 	const getAuthedUser = async (req: express.Request): Promise<UserData> => {
 		const s = req.session as any;
+		// console.log(s);
 		if ('public_id' in s) {
 			return await um.findByPublicId(s.public_id);
 		}
@@ -39,30 +63,8 @@ export const web = async (pool: Pool, conn: Connection, oauth: ClientOAuth2) => 
 		throw new Error(`no token`);
 	};
 
-	const loader = new TwingLoaderFilesystem(__dirname + '/../view');
-	const twing = new TwingEnvironment(loader);
-
-	const app = express();
-
-	const staticPath = resolve(__dirname + '../../../public');
-	app.use(express.static(staticPath));
-	app.use(bodyParser.urlencoded({ extended: true }));
-	app.use(bodyParser.json());
-	app.use(cors({ credentials: true, origin: '*' }));
-	app.use(
-		session({
-			resave: true,
-			saveUninitialized: true,
-			cookie: { secure: false, sameSite: false },
-			secret: 'lalaley',
-			rolling: true,
-		})
-	);
-
-	let token: string;
-
 	app.get('/auth/redirect', async (req: express.Request, res: express.Response) => {
-		console.log('/auth/redirect');
+		console.log(req.originalUrl);
 		const result = await oauth.code.getToken(req.originalUrl);
 		token = result.accessToken;
 
@@ -72,12 +74,15 @@ export const web = async (pool: Pool, conn: Connection, oauth: ClientOAuth2) => 
 	});
 
 	app.get('/', async (req: express.Request, res: express.Response) => {
-		console.log('/');
+		console.log(req.originalUrl);
+		// if (!token) {
+		// 	res.redirect('/auth/redirect?hello');
+		// }
 		let user: UserData;
 		try {
 			user = await getAuthedUser(req);
 		} catch (e) {
-			console.error(e);
+			console.log(e);
 			const authorizeUrl = oauth.code.getUri();
 			const out = await twing.render('login.twig', { authorizeUrl });
 			res.end(out);
@@ -100,6 +105,12 @@ export const web = async (pool: Pool, conn: Connection, oauth: ClientOAuth2) => 
 
 		res.end(await twing.render(name, context));
 		res.end('/');
+	});
+
+	app.post('/close', async (req, res) => {
+		// TODO проверка прав пользователя
+		await cm.close();
+		res.redirect('/');
 	});
 
 	app.listen(3002);

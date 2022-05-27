@@ -29,8 +29,19 @@ CREATE TABLE transactions (
     user_id integer not null,
     type transaction_type,
     task_id integer null,
+    cycle_id integer not null,
     PRIMARY KEY (id)
 );
+
+CREATE TABLE cycles (
+    id serial,
+    created_at timestamp default current_timestamp,
+    is_closed boolean default false,
+    closed_at timestamp null,
+    PRIMARY KEY (id)
+);
+
+INSERT INTO cycles DEFAULT VALUES;
 
 CREATE TABLE payments (
     id serial,
@@ -48,11 +59,11 @@ CREATE TABLE payments (
 -- )
 
 CREATE VIEW balances (
-    user_id, value
+    user_id, dt, ct, balance
 ) AS (
-     SELECT u.id, SUM(t.debit) as dt, SUM(t.credit) as ct, SUM(t.debit) - SUM(t.credit) as value
-     FROM users u
-              LEFT JOIN transactions t on u.id = t.user_id
-     GROUP BY u.id
-     ORDER BY u.id DESC
+    SELECT u.id, SUM(t.debit) as dt, SUM(t.credit) as ct, SUM(t.debit) - SUM(t.credit) as value
+    FROM users u
+      LEFT JOIN transactions t on u.id = t.user_id
+    GROUP BY u.id
+    ORDER BY u.id DESC
 );

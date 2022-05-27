@@ -32,15 +32,27 @@ export abstract class AbstractModel {
 	}
 
 	// TODO можно переписать на AWAIT this._pool.connect() - станет читаемо
-	protected async _modify(q: string, params?: any[]): Promise<QueryResult> {
+	protected async _modify(q: string | string[], params?: any[]): Promise<QueryResult> {
 		return new Promise((resolve, reject) => {
 			this._pool.connect(async (err, client, release) => {
 				if (err) {
 					reject(err);
 				} else {
 					try {
-						const res = await client.query(q, params ? params : []);
-						resolve(res);
+						if (typeof q === 'string') {
+							const res = await client.query(q, params ? params : []);
+							resolve(res);
+						} else {
+							if (q.length > 0) {
+								let res;
+								for (const eachQ of q) {
+									res = await client.query(eachQ, params ? params : []);
+								}
+								resolve(res as QueryResult);
+							} else {
+								reject(new Error(`no query given`));
+							}
+						}
 					} catch (e) {
 						reject(e);
 					} finally {

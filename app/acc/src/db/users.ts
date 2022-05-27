@@ -23,7 +23,7 @@ export class Users extends AbstractModel {
 
 	async findByPublicId(publicId: string): Promise<UserDataWithBalance> {
 		const users = await this._find<UserDataWithBalance[]>(
-			`SELECT u.*, b.value FROM users u LEFT JOIN balances b ON b.user_id = u.id WHERE public_id = $1`,
+			`SELECT u.*, b.dt as debit, b.ct as credit, b.balance as balance FROM users u LEFT JOIN balances b ON b.user_id = u.id WHERE u.public_id = $1`,
 			[publicId]
 		);
 		return users[0];

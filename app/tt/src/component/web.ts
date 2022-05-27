@@ -62,18 +62,17 @@ export const web = async (pool: Pool, conn: Connection, oauth: ClientOAuth2) => 
 	app.use(cors({ credentials: true, origin: '*' }));
 	app.use(
 		session({
-			resave: true,
-			saveUninitialized: true,
-			cookie: { secure: false, sameSite: false },
+			resave: false,
+			saveUninitialized: false,
+			cookie: { secure: false, sameSite: true },
 			secret: 'hophey',
-			rolling: true,
 		})
 	);
 
 	let token: string;
 
 	app.get('/auth/redirect', async (req: express.Request, res: express.Response) => {
-		console.log('/auth/redirect');
+		console.log(req.originalUrl);
 		const result = await oauth.code.getToken(req.originalUrl);
 		token = result.accessToken;
 
@@ -85,7 +84,7 @@ export const web = async (pool: Pool, conn: Connection, oauth: ClientOAuth2) => 
 	});
 
 	app.get('/', async (req: express.Request, res: express.Response) => {
-		console.log('/');
+		console.log(req.originalUrl);
 		let user: UserData;
 		try {
 			user = await getAuthedUser(req);
@@ -161,7 +160,8 @@ export const web = async (pool: Pool, conn: Connection, oauth: ClientOAuth2) => 
 
 				const json = toJSON('TaskReassign', 1, {
 					public_id: reassigned.public_id,
-					account_public_id: reassigned.assigned_to,
+					assigner_public_id: user.public_id,
+					worker_public_id: reassigned.assigned_to,
 				} as DataTaskReassign1);
 
 				if (!chBE.publish(ExchangeTasksBE, '', Buffer.from(json))) {
