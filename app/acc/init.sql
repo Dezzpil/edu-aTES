@@ -49,21 +49,14 @@ CREATE TABLE payments (
     value uint
 );
 
--- CREATE TABLE billing_cycles (
---     id serial,
---     created_at timestamp,
---     user_id integer not null,
---     debit uint default 0,
---     credit uint default 0,
---     PRIMARY KEY (id)
--- )
-
 CREATE VIEW balances (
     user_id, dt, ct, balance
 ) AS (
-    SELECT u.id, SUM(t.debit) as dt, SUM(t.credit) as ct, SUM(t.debit) - SUM(t.credit) as value
-    FROM users u
-      LEFT JOIN transactions t on u.id = t.user_id
-    GROUP BY u.id
-    ORDER BY u.id DESC
+     SELECT u.id, SUM(t.debit) as dt, SUM(t.credit) as ct, SUM(t.debit) - SUM(t.credit) as value
+     FROM users u
+          LEFT JOIN transactions t on u.id = t.user_id
+          LEFT JOIN cycles c on t.cycle_id = c.id
+     WHERE c.is_closed = false
+     GROUP BY u.id
+     ORDER BY u.id DESC
 );

@@ -10,6 +10,11 @@ import { resolve } from 'path';
 import { Transactions } from '../db/transactions';
 import { inspect } from 'util';
 import { Cycles } from '../db/cycles';
+import { toJSON } from '../../../esr/event';
+import { DataTaskCreated1 } from '../../../esr/events/task/created/1';
+import { ExchangeBillingCUD, ExchangeTasksCUD } from '../../../esr/names';
+import { DataBillingCycleClosed1 } from '../../../esr/events/billing-cycle/closed/1';
+import { Balances } from '../db/balances';
 
 const cors = require('cors');
 const axios = require('axios').default;
@@ -18,6 +23,7 @@ export const web = async (pool: Pool, conn: Connection, oauth: ClientOAuth2) => 
 	const um = new Users(pool);
 	const trm = new Transactions(pool);
 	const cm = new Cycles(pool);
+	const bm = new Balances(pool);
 
 	const loader = new TwingLoaderFilesystem(__dirname + '/../view');
 	const twing = new TwingEnvironment(loader);
@@ -107,9 +113,30 @@ export const web = async (pool: Pool, conn: Connection, oauth: ClientOAuth2) => 
 		res.end('/');
 	});
 
+	const chCUD = await conn.createChannel();
+	await chCUD.assertExchange(ExchangeBillingCUD, 'fanout', { durable: false });
+
 	app.post('/close', async (req, res) => {
 		// TODO проверка прав пользователя
-		await cm.close();
+		const user = await getAuthedUser(req);
+		const balances = await bm.findForAll();
+
+		// TODO для всех балансов, у которых > 0 мы делаем выплаты
+		// TODO для всех балансов, у которых < 0 мы погашаем задолженность
+
+		const cycle = await cm.close();
+
+		// TODO для всех должников мы формируем списываем долг в новом цикле
+
+		const json = toJSON('BillingCycleClosed', 1, {
+			id: cycle.id + '',
+		} as DataBillingCycleClosed1);
+		if (!chCUD.publish(ExchangeBillingCUD, '', Buffer.from(json))) {
+			// TODO обработка ошибок
+			throw new Error('sent failed');
+		}
+		console.log(`event BillingCycleClosed published`);
+
 		res.redirect('/');
 	});
 
