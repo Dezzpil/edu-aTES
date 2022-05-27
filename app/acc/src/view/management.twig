@@ -1,0 +1,29 @@
+{% extends "template.twig" %}
+
+{% block content %}
+    <pre><small>{{ user }}</small></pre>
+    <form method="post" action="/close">
+        <input type="submit" class="button-primary" value="Закончить цикл">
+    </form>
+
+    {% if transactions|length %}
+    <table class="u-full-width">
+        <thead>
+            <tr>
+                <th>Дата начала</th>
+                <th>Кол-во начислений</th>
+                <th>Сумма</th>
+            </tr>
+        </thead>
+        {% for info in transactions %}
+        <tr>
+            <td>{{ info.created_at|date('Y-m-d H:i') }}</td>
+            <td>{{ info.count }}</td>
+            <td>{{ info.value }}$</td>
+        </tr>
+        {% endfor %}
+    </table>
+{% else %}
+<p style="color: darkgray">Менеджмент ничего не заработал ...</p>
+{% endif %}
+{% endblock %}

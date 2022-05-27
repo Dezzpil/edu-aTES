@@ -1,46 +1,51 @@
-<!DOCTYPE html>
-<html lang="en">
-<head>
+{% extends "template.twig" %}
 
-  <!-- Basic Page Needs
-  –––––––––––––––––––––––––––––––––––––––––––––––––– -->
-  <meta charset="utf-8">
-  <title>Your page title here :)</title>
-  <meta name="description" content="">
-  <meta name="author" content="">
+{% block content %}
+    <pre><small>{{ userStr }}</small></pre>
 
-  <!-- Mobile Specific Metas
-  –––––––––––––––––––––––––––––––––––––––––––––––––– -->
-  <meta name="viewport" content="width=device-width, initial-scale=1">
+    {% if notWorker %}
+        <form method="post" action="/create" class="row">
+            <div class="three columns">
+                <select name="workerId" id="workerId" style="width: 100%">
+                    {% for worker in workers %}
+                        <option value="{{ worker.public_id }}">{{ worker.email }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+            <div class="six columns">
+                <input type="text" name="desc" id="desc" value="" placeholder="Описание задачи" style="width: 100%">
+            </div>
+            <div class="three columns">
+                <input class="button-primary" type="submit" value="Зарегистрировать" style="float: right; width: 100%">
+            </div>
+        </form>
+        {% if tasks|length %}
+            <form method="post" action="/reassign">
+                <input class="button-primary" type="submit" value="Переназначить задачи">
+            </form>
+        {% endif %}
+    {% endif %}
 
-  <!-- FONT
-  –––––––––––––––––––––––––––––––––––––––––––––––––– -->
-  <link href="//fonts.googleapis.com/css?family=Raleway:400,300,600" rel="stylesheet" type="text/css">
-
-  <!-- CSS
-  –––––––––––––––––––––––––––––––––––––––––––––––––– -->
-  <link rel="stylesheet" href="css/normalize.css">
-  <link rel="stylesheet" href="css/skeleton.css">
-
-  <!-- Favicon
-  –––––––––––––––––––––––––––––––––––––––––––––––––– -->
-  <link rel="icon" type="image/png" href="images/favicon.png">
-
-</head>
-<body>
-
-  <!-- Primary Page Layout
-  –––––––––––––––––––––––––––––––––––––––––––––––––– -->
-  <div class="container">
-    <div class="row">
-      <div class="one-half column" style="margin-top: 25%">
-        <h4>Basic Page</h4>
-        <p>This index.html page is a placeholder with the CSS, font and favicon. It's just waiting for you to add some content! If you need some help hit up the <a href="http://www.getskeleton.com">Skeleton documentation</a>.</p>
-      </div>
-    </div>
-  </div>
-
-<!-- End Document
-  –––––––––––––––––––––––––––––––––––––––––––––––––– -->
-</body>
-</html>
+    {% if tasks|length %}
+        {% for task in tasks %}
+            <div class="row" style="margin-bottom: 12px;">
+                <div class="ten columns">
+                    {{ task.description }}<br>
+                    <small style="color: darkblue">
+                        {{ task.assigned_at|date("Y-m-d H:i:s") }} / <b>{{ task.email }}</b> / {{ task.public_id }}
+                    </small>
+                </div>
+                <div class="two columns">
+                    {% if user.public_id is same as (task.assigned_to) %}
+                    <form method="post" action="/complete">
+                        <input type="hidden" name="id" value="{{ task.id }}">
+                        <input type="submit" value="Выполнить" style="float: right">
+                    </form>
+                    {% endif %}
+                </div>
+            </div>
+        {% endfor %}
+    {% else %}
+        <span style="color: darkgray">Задач нет...</span>
+    {% endif %}
+{% endblock %}

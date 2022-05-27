@@ -18,8 +18,10 @@
   },
   "homepage": "https://github.com/Dezzpil/edu-aTES#readme",
   "devDependencies": {
+    "@types/jest": "^27.5.1",
     "@types/node": "^14.18.18",
     "prettier": "^2.6.2",
+    "ts-jest": "^28.0.2",
     "ts-node": "^10.7.0",
     "typescript": "^4.6.4"
   }

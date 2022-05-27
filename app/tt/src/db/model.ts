@@ -4,7 +4,7 @@ export abstract class AbstractModel {
 	protected constructor(protected _pool: Pool) {}
 
 	// TODO можно переписать на AWAIT this._pool.connect() - станет читаемо
-	protected async _find<T>(q: string, params?: any[]): Promise<T> {
+	protected async _find<T>(q: string, params?: any[], throwNotFound = true): Promise<T> {
 		return new Promise((resolve, reject) => {
 			this._pool.connect(async (err, client, release) => {
 				if (err) {
@@ -15,7 +15,11 @@ export abstract class AbstractModel {
 						if (result.rowCount) {
 							resolve(result.rows as unknown as T);
 						} else {
-							reject(new Error(`not found`));
+							if (throwNotFound) {
+								reject(new Error(`not found`));
+							} else {
+								resolve([] as unknown as T);
+							}
 						}
 					} catch (e) {
 						reject(e);

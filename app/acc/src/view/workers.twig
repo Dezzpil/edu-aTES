@@ -1,0 +1,35 @@
+{% extends "template.twig" %}
+
+{% block content %}
+    <pre><small>{{ user }}</small></pre>
+    <table class="u-full-width">
+        <thead>
+        <tr>
+            <th>Тип</th>
+            <th>Начисление</th>
+            <th>Списание</th>
+            <th>Задача</th>
+        </tr>
+        </thead>
+        <tbody>
+        {% for tr in transactions %}
+        <tr>
+            <td>{{ tr.type }}</td>
+            {% if tr.debit > 0 %}
+                <td style="color: forestgreen"> +{{ tr.debit }}$</td>
+            {% else %}
+                <td>0</td>
+            {% endif %}
+
+            {% if tr.credit > 0 %}
+                <td style="color: red"> -{{ tr.credit }}$</td>
+            {% else %}
+                <td>0</td>
+            {% endif %}
+
+            <td>{{ tr.task_desc }} ({{ tr.task_price }}$)</td>
+        </tr>
+        {% endfor %}
+        </tbody>
+    </table>
+{% endblock %}

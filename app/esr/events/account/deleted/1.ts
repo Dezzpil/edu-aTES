@@ -1,6 +1,6 @@
 import { Event } from '../../../event';
 
-export interface AccountDeleted extends Event {
+export interface AccountDeleted1 extends Event {
 	event_name: 'AccountDeleted';
 	event_version: 1;
 	data: {

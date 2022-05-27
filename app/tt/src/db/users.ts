@@ -1,9 +1,8 @@
 import { Pool } from 'pg';
 import { AbstractModel } from './model';
-import { AccountsEventsModifyData } from '../events';
 
 export interface UserData {
-	id: string;
+	public_id: string;
 	email: string;
 	role: string;
 }
@@ -20,37 +19,48 @@ export class Users extends AbstractModel {
 	}
 
 	async findById(publicId: string): Promise<UserData> {
-		const users = await this._find<UserData[]>(`SELECT * FROM users WHERE id = $1`, [publicId]);
+		const users = await this._find<UserData[]>(`SELECT * FROM users WHERE public_id = $1`, [publicId]);
 		return users[0];
 	}
 
 	async findAnyAdmin(): Promise<UserData> {
-		const users = await this._find<UserData[]>(`SELECT * FROM users WHERE role = ${UserRoles.Admin}`);
+		const q = `SELECT * FROM users WHERE role = '${UserRoles.Admin}'`;
+		const users = await this._find<UserData[]>(q);
 		return users[0];
 	}
 
 	async findWorkers(): Promise<UserData[]> {
-		return this._find<UserData[]>(`SELECT * FROM users WHERE role = ${UserRoles.Worker}`);
+		const q = `SELECT * FROM users WHERE role = '${UserRoles.Worker}'`;
+		return this._find<UserData[]>(q, [], false);
 	}
 
-	async create(data: AccountsEventsModifyData): Promise<UserData> {
-		const user = {
-			id: data.id,
-			role: data.position || UserRoles.Admin,
-			email: data.email,
-		} as UserData;
-		const result = await this._modify(`INSERT INTO users (id, role, email) VALUES ($1, $2, $3)`, [
-			user.id,
-			user.role,
-			user.email,
-		]);
+	async create(
+		publicId: string,
+		email: string,
+		position: string | null,
+		name: string | null
+	): Promise<UserData> {
+		if (!position) position = UserRoles.Manager;
+		const q = `INSERT INTO users (public_id, role, email) VALUES ($1, $2, $3) ON CONFLICT (public_id) DO UPDATE SET email = $3 RETURNING *`;
+		const result = await this._modify(q, [publicId, position, email]);
 		return result.rows[0];
 	}
 
+	async upsert(
+		publicId: string,
+		email: string,
+		position: string | null,
+		name: string | null
+	): Promise<UserData> {
+		if (!position) position = UserRoles.Worker;
+		const q = `INSERT INTO users (public_id, email, role) VALUES ($1, $2, $3) ON CONFLICT (public_id) DO UPDATE SET email = $2 RETURNING *`;
+		const res = await this._modify(q, [publicId, email, position]);
+		return res.rows[0];
+	}
+
 	async changeRole(user: UserData, role: string) {
-		user.role = role;
-		const q = `UPDATE users SET role=$1 WHERE id=$2`;
-		const res = await this._modify(q, [role, user.id]);
+		const q = `UPDATE users SET role=$1 WHERE public_id=$2 RETURNING *`;
+		const res = await this._modify(q, [role, user.public_id]);
 		return res.rows[0];
 	}
 }

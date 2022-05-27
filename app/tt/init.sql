@@ -1,23 +1,23 @@
-CREATE TYPE userrole AS ENUM ('admin', 'manager', 'worker');
+CREATE TYPE user_role AS ENUM ('admin', 'manager', 'worker');
 
 CREATE TABLE users (
-    id text not null unique,
+    id serial,
+    public_id text not null unique,
     email text not null,
-    role userrole not null ,
+    role user_role not null ,
     PRIMARY KEY (id)
 );
 
-INSERT INTO users (id, email, role) VALUES (gen_random_uuid()::text, 'n.dezz.orlov@yandex.com', 'admin');
-INSERT INTO users (id, email, role) VALUES (gen_random_uuid()::text, 'foo@gmail.com', 'worker');
-INSERT INTO users (id, email, role) VALUES (gen_random_uuid()::text, 'bar@gmail.com', 'worker');
+INSERT INTO users (public_id, email, role) VALUES ('59bd60f5-ac22-4161-a2a0-a5bf1e64973d', 'n.dezz.orlov@yandex.com', 'admin');
 
 CREATE TABLE tasks (
     id serial,
+    public_id uuid default gen_random_uuid(),
     description text,
     status smallint,
-    created_at timestamp,
+    created_at timestamp default current_timestamp,
     created_by text,
-	assigned_at timestamp,
+	assigned_at timestamp default current_timestamp,
     assigned_to text,
 	completed_at timestamp,
     completed_by text,
